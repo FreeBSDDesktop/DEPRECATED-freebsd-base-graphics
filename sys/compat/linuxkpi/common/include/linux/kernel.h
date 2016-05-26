@@ -133,25 +133,23 @@
 #define	DIV_ROUND_UP_ULL(x, n)	DIV_ROUND_UP((unsigned long long)(x), (n))
 #define	FIELD_SIZEOF(t, f)	sizeof(((t *)0)->f)
 
-#define	printk(X...)		printf(X)
+#define	printk(...)		printf(__VA_ARGS__)
 #define	vprintk(f, a)		vprintf(f, a)
-
 
 struct va_format {
 	const char *fmt;
 	va_list *va;
 };
 
-
 static inline int
 vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
 {
-	int i;
 	ssize_t ssize = size;
+	int i;
 
 	i = vsnprintf(buf, size, fmt, args);
 
-	return (i >= ssize) ? (ssize - 1) : i;
+	return ((i >= ssize) ? (ssize - 1) : i);
 }
 
 static inline int
@@ -166,18 +164,8 @@ scnprintf(char *buf, size_t size, const char *fmt, ...)
 
 	return i;
 }
-int kstrtouint(const char *s, unsigned int base, unsigned int *res);
 
-static inline int
-kstrtou32(const char *s, unsigned int base, uint32_t *res)
-{
-	return (kstrtouint(s, base, res));
-}
-
-
-
-/* XXX */ 
-#define irqs_disabled() (0)
+#define	irqs_disabled() (curthread->td_critnest >= 1)
 
 /*
  * The "pr_debug()" and "pr_devel()" macros should produce zero code
@@ -233,7 +221,6 @@ kstrtou32(const char *s, unsigned int base, uint32_t *res)
 	log(LOG_ERR, pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_warning(fmt, ...) \
 	log(LOG_WARNING, pr_fmt(fmt), ##__VA_ARGS__)
-
 #define pr_warn(...) \
 	pr_warning(__VA_ARGS__)
 #define pr_warn_once(fmt, ...) \
@@ -265,15 +252,6 @@ kstrtou32(const char *s, unsigned int base, uint32_t *res)
 })
 #endif
 
-#ifndef WARN_ONCE
-#define WARN_ONCE(condition, format...) ({                              \
-        int __ret_warn_on = !!(condition);                              \
-        if (unlikely(__ret_warn_on))                                    \
-                pr_warn_once(format);                                   \
-        unlikely(__ret_warn_on);                                        \
-})
-#endif
-
 #define container_of(ptr, type, member)				\
 ({								\
 	__typeof(((type *)0)->member) *_p = (ptr);		\
@@ -287,6 +265,7 @@ kstrtou32(const char *s, unsigned int base, uint32_t *res)
 #define	kstrtol(a,b,c) ({*(c) = strtol(a,0,b); 0;})
 #define	kstrtoint(a,b,c) ({*(c) = strtol(a,0,b); 0;})
 #define	kstrtouint(a,b,c) ({*(c) = strtol(a,0,b); 0;})
+#define	kstrtou32(a,b,c) ({*(c) = strtol(a,0,b); 0;})
 
 #define min(x, y)	((x) < (y) ? (x) : (y))
 #define max(x, y)	((x) > (y) ? (x) : (y))
@@ -337,8 +316,6 @@ typedef struct pm_message {
 	a = b;				\
 	b = _swap_tmp;			\
 } while (0)
-
-
 
 #define	DIV_ROUND_CLOSEST(x, divisor)	(((x) + ((divisor) / 2)) / (divisor))
 
