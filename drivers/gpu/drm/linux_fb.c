@@ -286,8 +286,8 @@ framebuffer_release(struct linux_fb_info *info)
 			sc->fb_helper->fbdev = NULL;
 	}
 	kfree(info->apertures);
-	free(info, DRM_MEM_KMS);
 	free(info->fbio.fb_priv, DRM_MEM_KMS);
+	free(info, DRM_MEM_KMS);
 }
 
 static void
