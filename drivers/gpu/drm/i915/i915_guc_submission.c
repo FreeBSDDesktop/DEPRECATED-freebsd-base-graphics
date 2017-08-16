@@ -1242,11 +1242,10 @@ static void guc_log_cleanup(struct intel_guc *guc)
 
 static int guc_log_create_extras(struct intel_guc *guc)
 {
-	struct drm_i915_private *dev_priv __unused;
+	struct drm_i915_private *dev_priv __unused = guc_to_i915(guc);
 	void *vaddr;
 	int ret;
 
-	dev_priv = guc_to_i915(guc);
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
 	/* Nothing to do */
@@ -1359,10 +1358,9 @@ static void guc_log_create(struct intel_guc *guc)
 
 static int guc_log_late_setup(struct intel_guc *guc)
 {
-	struct drm_i915_private *dev_priv __unused;
+	struct drm_i915_private *dev_priv __unused = guc_to_i915(guc);
 	int ret;
 
-	dev_priv = guc_to_i915(guc);
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
 	if (i915.guc_log_level < 0)
