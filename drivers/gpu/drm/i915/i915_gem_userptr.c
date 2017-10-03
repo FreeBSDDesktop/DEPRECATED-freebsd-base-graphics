@@ -508,7 +508,12 @@ __i915_gem_userptr_get_pages_worker(struct work_struct *_work)
 			flags |= FOLL_WRITE;
 
 		ret = -EFAULT;
+#ifdef __FreeBSD__
+		/* XXXmarkj this code is non-functional anyway. */
+		if (0) {
+#else
 		if (mmget_not_zero(mm)) {
+#endif
 			down_read(&mm->mmap_sem);
 			while (pinned < npages) {
 				ret = get_user_pages_remote

@@ -2072,7 +2072,6 @@ i915_gem_release_mmap(struct drm_i915_gem_object *obj)
 	 */
 	wmb();
 #endif
-	obj->fault_mappable = false;
 
 out:
 	intel_runtime_pm_put(i915);
@@ -2093,8 +2092,16 @@ void i915_gem_runtime_suspend(struct drm_i915_private *dev_priv)
 	list_for_each_entry_safe(obj, on,
 				 &dev_priv->mm.userfault_list, userfault_link) {
 		list_del_init(&obj->userfault_link);
+#ifdef __FreeBSD__
+		struct drm_vma_offset_node *node;
+
+		node = &obj->base.vma_node;
+		unmap_mapping_range(obj, drm_vma_node_offset_addr(node),
+		    drm_vma_node_size(node) << PAGE_SHIFT, 1);
+#else
 		drm_vma_node_unmap(&obj->base.vma_node,
 				   obj->base.dev->anon_inode->i_mapping);
+#endif
 	}
 
 	/* The fence will be lost when the device powers down. If any were
@@ -2385,7 +2392,12 @@ i915_gem_object_get_pages_gtt(struct drm_i915_gem_object *obj)
 	GEM_BUG_ON(obj->base.read_domains & I915_GEM_GPU_DOMAINS);
 	GEM_BUG_ON(obj->base.write_domain & I915_GEM_GPU_DOMAINS);
 
+#ifdef __FreeBSD__
+	/* !CONFIG_SWIOTLB */
+	max_segment = 0;
+#else
 	max_segment = swiotlb_max_segment();
+#endif
 	if (!max_segment)
 		max_segment = rounddown(UINT_MAX, PAGE_SIZE);
 
@@ -2686,7 +2698,11 @@ static int
 i915_gem_object_pwrite_gtt(struct drm_i915_gem_object *obj,
 			   const struct drm_i915_gem_pwrite *arg)
 {
+#ifdef __FreeBSD__
+	vm_object_t mapping = obj->base.filp->f_shmem;
+#else
 	struct address_space *mapping = obj->base.filp->f_mapping;
+#endif
 	char __user *user_data = u64_to_user_ptr(arg->data_ptr);
 	u64 remain, offset;
 	unsigned int pg;
@@ -2723,21 +2739,29 @@ i915_gem_object_pwrite_gtt(struct drm_i915_gem_object *obj,
 		if (len > remain)
 			len = remain;
 
+#ifdef __FreeBSD__
+		(void)data;
+		(void)err;
+		page = shmem_read_mapping_page(mapping, offset);
+#else
 		err = pagecache_write_begin(obj->base.filp, mapping,
 					    offset, len, 0,
 					    &page, &data);
 		if (err < 0)
 			return err;
+#endif
 
 		vaddr = kmap(page);
 		unwritten = copy_from_user(vaddr + pg, user_data, len);
 		kunmap(page);
 
+#ifndef __FreeBSD__
 		err = pagecache_write_end(obj->base.filp, mapping,
 					  offset, len, len - unwritten,
 					  page, data);
 		if (err < 0)
 			return err;
+#endif
 
 		if (unwritten)
 			return -EFAULT;
@@ -2838,7 +2862,10 @@ int i915_gem_reset_prepare(struct drm_i915_private *dev_priv)
 		 * prevents the race.
 		 */
 		tasklet_kill(&engine->irq_tasklet);
+#ifndef __FreeBSD__
+		/* XXX */
 		tasklet_disable(&engine->irq_tasklet);
+#endif
 
 		if (engine_stalled(engine)) {
 			request = i915_gem_find_active_request(engine);
@@ -2982,8 +3009,14 @@ void i915_gem_reset_finish(struct drm_i915_private *dev_priv)
 
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
+#ifdef __FreeBSD__
+	(void)engine;
+	(void)id;
+#else
+	/* XXX */
 	for_each_engine(engine, dev_priv, id)
 		tasklet_enable(&engine->irq_tasklet);
+#endif
 }
 
 static void nop_submit_request(struct drm_i915_gem_request *request)

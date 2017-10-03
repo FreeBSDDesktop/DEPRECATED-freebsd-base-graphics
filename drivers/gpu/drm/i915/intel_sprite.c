@@ -445,7 +445,7 @@ vlv_update_plane(struct drm_plane *dplane,
 	I915_WRITE(SPSTRIDE(pipe, plane_id), fb->pitches[0]);
 	I915_WRITE(SPPOS(pipe, plane_id), (crtc_y << 16) | crtc_x);
 
-	if (fb->modifier[0] == I915_FORMAT_MOD_X_TILED)
+	if (fb->modifier == I915_FORMAT_MOD_X_TILED)
 		I915_WRITE(SPTILEOFF(pipe, plane_id), (y << 16) | x);
 	else
 		I915_WRITE(SPLINOFF(pipe, plane_id), linear_offset);
@@ -1094,7 +1094,7 @@ intel_sprite_plane_create(struct drm_i915_private *dev_priv,
 		}
 	}
 
-	if (INTEL_GEN(dev) >= 9) {
+	if (INTEL_GEN(dev_priv) >= 9) {
 		supported_rotations =
 			DRM_ROTATE_0 | DRM_ROTATE_90 |
 			DRM_ROTATE_180 | DRM_ROTATE_270;

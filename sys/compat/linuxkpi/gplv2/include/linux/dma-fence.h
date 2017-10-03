@@ -47,6 +47,7 @@ struct dma_fence {
 	unsigned long flags;
 	ktime_t timestamp;
 	int status;
+	int error;
 	struct list_head child_list;
 	struct list_head active_list;
 };
@@ -449,6 +450,7 @@ dma_fence_init(struct dma_fence *fence, const struct dma_fence_ops *ops,
 	fence->seqno = seqno;
 	INIT_LIST_HEAD(&fence->cb_list);
 	kref_init(&fence->refcount);
+	fence->error = 0;
 }
 
 static inline bool
@@ -460,6 +462,12 @@ dma_fence_is_later(struct dma_fence *f1, struct dma_fence *f2){
 	return (f1->seqno > f2->seqno);
 }
 
+static inline void
+dma_fence_set_error(struct dma_fence *f, int error)
+{
+
+	f->error = error;
+}
 
 #define DMA_FENCE_TRACE(f, fmt, args...)		\
 	do {								\

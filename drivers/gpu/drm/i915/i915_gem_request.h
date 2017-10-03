@@ -651,8 +651,7 @@ i915_gem_active_isset(const struct i915_gem_active *active)
  * Returns 0 if successful, or a negative error code.
  */
 static inline int
-i915_gem_active_wait_unlocked(const struct i915_gem_active *active,
-			      unsigned int flags)
+i915_gem_active_wait(const struct i915_gem_active *active, unsigned int flags)
 {
 	struct drm_i915_gem_request *request;
 	long ret = 0;

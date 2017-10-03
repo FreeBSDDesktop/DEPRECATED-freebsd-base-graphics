@@ -561,9 +561,10 @@ static void __exit i915_exit(void)
 #ifndef __FreeBSD__
 	if (!i915_pci_driver.driver.owner)
 		return;
-#endif
 
+	/* XXX */
 	pci_unregister_driver(&i915_pci_driver);
+#endif
 }
 
 module_init(i915_init);

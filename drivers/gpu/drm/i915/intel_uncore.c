@@ -959,8 +959,8 @@ __gen2_read(64)
 	trace_i915_reg_rw(false, reg, val, sizeof(val), trace); \
 	return val
 
-static noinline void ___force_wake_auto(struct drm_i915_private *dev_priv,
-					enum forcewake_domains fw_domains)
+static __noinline void ___force_wake_auto(struct drm_i915_private *dev_priv,
+					  enum forcewake_domains fw_domains)
 {
 	struct intel_uncore_forcewake_domain *domain;
 

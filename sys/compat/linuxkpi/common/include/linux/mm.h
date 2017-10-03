@@ -121,6 +121,7 @@ struct vm_fault {
 	pgoff_t	pgoff;
 	unsigned long address;	/* user-space address */
 	struct page *page;
+	struct vm_area_struct *vma;
 };
 
 struct vm_operations_struct {
