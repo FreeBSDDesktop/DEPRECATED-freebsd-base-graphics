@@ -122,11 +122,6 @@ SRCS	= \
 	sched_fence.c \
 	sdma_v2_4.c \
 	sdma_v3_0.c \
-	si.c \
-	si_dma.c \
-	si_dpm.c \
-	si_ih.c \
-	si_smc.c \
 	smumgr.c \
 	smu7_clockpowergating.c \
 	smu7_hwmgr.c \
@@ -142,6 +137,13 @@ SRCS	= \
 	vce_v2_0.c \
 	vce_v3_0.c \
 	vi.c
+
+# Causes error if CONFIG_DRM_AMDGPU_SI is not defined, which is default
+	# si.c \
+	# si_dma.c \
+	# si_dpm.c \
+	# si_ih.c \
+	# si_smc.c \
 
 CFLAGS+=	-I${SRCTOP}/sys
 CFLAGS+=	-I${SRCTOP}/sys/compat/linuxkpi/gplv2/include
@@ -216,7 +218,7 @@ CWARNFLAGS.cz_smc.c=	-Wno-missing-prototypes
 CWARNFLAGS.cz_clockpowergating.c=	-Wno-missing-prototypes -Wno-enum-conversion
 CWARNFLAGS.cz_hwmgr.c=	-Wno-missing-prototypes -Wno-cast-qual
 CWARNFLAGS.dce_virtual.c=	-Wno-missing-prototypes
-CWARNFLAGS.dce_v6_0.c=	 -Wno-unused-const-variable
+CWARNFLAGS.dce_v6_0.c=	 -Wno-unused-const-variable -Wno-missing-prototypes
 CWARNFLAGS.dce_v8_0.c=	-Wno-missing-prototypes
 CWARNFLAGS.dce_v10_0.c=	-Wno-missing-prototypes
 CWARNFLAGS.dce_v11_0.c=	-Wno-missing-prototypes

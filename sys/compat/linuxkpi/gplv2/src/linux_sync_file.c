@@ -37,7 +37,8 @@ static struct sync_file *sync_file_alloc(void)
 		return NULL;
 
 	#pragma GCC warning "anon_inode_getfile() need proper impl!"
-	sync_file->file = anon_inode_getfile("/tmp/drm_sync_file", &sync_file_fops, sync_file, 0);
+	sync_file->file = anon_inode_getfile("/tmp/drm_sync_file", &sync_file_fops,
+										 sync_file, 0);
 	if (IS_ERR(sync_file->file))
 		goto err;
 
@@ -83,7 +84,8 @@ struct sync_file *sync_file_create(struct dma_fence *fence)
 
 	snprintf(sync_file->name, sizeof(sync_file->name), "%s-%s%llu-%d",
 		 fence->ops->get_driver_name(fence),
-			 fence->ops->get_timeline_name(fence), (unsigned long long)fence->context,
+			 fence->ops->get_timeline_name(fence),
+			 (unsigned long long)fence->context,
 		 fence->seqno);
 
 	return sync_file;

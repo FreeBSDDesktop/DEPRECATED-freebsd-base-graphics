@@ -40,7 +40,8 @@ anon_inode_getfile(const char *name,
 	fp->f_flags = flags & FMASK;
 
 	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_SYSSPACE, name, td);
-	error = vn_open_cred(&nd, &flags, cmode, vn_open_flags, td->td_ucred, fp->_file);
+	error = vn_open_cred(&nd, &flags, cmode, vn_open_flags, td->td_ucred,
+						 fp->_file);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	if (error != 0)
 		return (NULL);

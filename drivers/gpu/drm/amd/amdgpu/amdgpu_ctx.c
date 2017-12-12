@@ -136,7 +136,8 @@ static int amdgpu_ctx_free(struct amdgpu_fpriv *fpriv, uint32_t id)
 
 	mutex_lock(&mgr->lock);
 #ifdef __FreeBSD__
-	ctx = idr_remove((struct idr *)&mgr->ctx_handles, id);
+	ctx = NULL;
+	idr_remove((struct idr *)&mgr->ctx_handles, id);
 #else
 	ctx = idr_remove(&mgr->ctx_handles, id);
 #endif

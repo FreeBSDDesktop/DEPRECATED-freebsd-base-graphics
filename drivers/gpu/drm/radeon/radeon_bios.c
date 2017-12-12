@@ -610,11 +610,7 @@ static bool radeon_acpi_vfct_bios(struct radeon_device *rdev)
 
 	if (!ACPI_SUCCESS(acpi_get_table("VFCT", 1, &hdr)))
 		return false;
-#ifdef __FreeBSD__
-	tbl_size = hdr->length;
-#else
 	tbl_size = hdr->Length;
-#endif
 	if (tbl_size < sizeof(UEFI_ACPI_VFCT)) {
 		DRM_ERROR("ACPI VFCT table present but broken (too short #1)\n");
 		return false;

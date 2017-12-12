@@ -111,9 +111,10 @@ CWARNFLAGS+=-Wno-cast-qual
 CWARNFLAGS+= -Wno-pointer-arith -Wno-pointer-sign -Wno-format
 CWARNFLAGS+= -Wno-expansion-to-defined
 
-CWARNFLAGS.drm_mipi_dsi.c+=	-Wno-incompatible-pointer-types-discards-qualifiers -Wno-int-conversion
+CWARNFLAGS.drm_atomic.c+=	-Wno-int-conversion 
 CWARNFLAGS.drm_cache.c+=	-Wno-int-conversion
-CWARNFLAGS.drm_info.c+=		-Wno-tautological-compare
 CWARNFLAGS.drm_debugfs.c+=	-Wno-format-security
+CWARNFLAGS.drm_info.c+=		-Wno-tautological-compare
+CWARNFLAGS.drm_mipi_dsi.c+=	-Wno-incompatible-pointer-types-discards-qualifiers -Wno-int-conversion
 CWARNFLAGS.drm_scatter.c+=	-Wno-int-conversion
 .include <bsd.kmod.mk>

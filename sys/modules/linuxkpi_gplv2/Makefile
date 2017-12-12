@@ -4,13 +4,14 @@ KMOD=	linuxkpi_gplv2
 
 SRCS=	linux_kmod_gplv2.c	\
 	linux_acpi.c		\
+	linux_anon_inodes.c	\
 	linux_async.c		\
 	linux_backlight.c	\
 	linux_compat.c		\
 	linux_component.c	\
 	linux_device.c		\
 	linux_dmabuf.c		\
-	linux_fence.c		\
+	linux_dmafence.c	\
 	linux_firmware.c	\
 	linux_fs.c		\
 	linux_fs_attr.c		\
@@ -23,6 +24,7 @@ SRCS=	linux_kmod_gplv2.c	\
 	linux_reservation.c	\
 	linux_seq_file.c	\
 	linux_sort.c		\
+	linux_sync_file.c	\
 	linux_video.c		\
 	interval_tree.c
 
