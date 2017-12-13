@@ -70,9 +70,11 @@ SRCS	= \
 	intel_freebsd.c \
 	intel_frontbuffer.c \
 	intel_guc_loader.c \
+	intel_guc_log.c \
 	intel_hangcheck.c \
 	intel_hdmi.c \
 	intel_hotplug.c \
+	intel_huc.c \
 	intel_i2c.c \
 	intel_lrc.c \
 	intel_lspcon.c \
@@ -82,6 +84,7 @@ SRCS	= \
 	intel_opregion.c \
 	intel_overlay.c \
 	intel_panel.c \
+	intel_pipe_crc.c \
 	intel_pm.c \
 	intel_psr.c \
 	intel_renderstate_gen6.c \
@@ -98,6 +101,7 @@ SRCS	= \
 	intel_uncore.c
 
 # i915_perf.c \ Can of worms. Don't use yet if possible.
+#	intel_lpe_audio.c \
 
 # GVT_DIR	= gvt
 # SRCS	+= ${GVT_DIR}/aperture_gm.c

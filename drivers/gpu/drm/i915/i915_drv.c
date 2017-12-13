@@ -895,8 +895,9 @@ static int i915_driver_init_early(struct drm_i915_private *dev_priv,
 
 	intel_detect_preproduction_hw(dev_priv);
 
+#ifdef CONFIG_I915_PERF // Not yet. i915_perf.c opens a can of worms...
 	i915_perf_init(dev_priv);
-
+#endif
 	return 0;
 
 err_workqueues:
@@ -910,7 +911,9 @@ err_workqueues:
  */
 static void i915_driver_cleanup_early(struct drm_i915_private *dev_priv)
 {
+#ifdef CONFIG_I915_PERF // Not yet. i915_perf.c opens a can of worms...
 	i915_perf_fini(dev_priv);
+#endif
 	i915_gem_load_cleanup(dev_priv);
 	i915_workqueues_cleanup(dev_priv);
 }
@@ -1205,8 +1208,11 @@ static void i915_driver_register(struct drm_i915_private *dev_priv)
 	if (drm_dev_register(dev, 0) == 0) {
 		i915_debugfs_register(dev_priv);
 		i915_guc_log_register(dev_priv);
+
 #ifndef __FreeBSD__
 		i915_setup_sysfs(dev_priv);
+#endif
+#ifdef CONFIG_I915_PERF // Not yet. i915_perf.c opens a can of worms...
 		/* Depends on sysfs having been initialized */
 		i915_perf_register(dev_priv);
 #endif
@@ -1246,8 +1252,10 @@ static void i915_driver_unregister(struct drm_i915_private *dev_priv)
 	acpi_video_unregister();
 	intel_opregion_unregister(dev_priv);
 
-#ifndef __FreeBSD__
+#ifdef CONFIG_I915_PERF // Not yet. i915_perf.c opens a can of worms...
 	i915_perf_unregister(dev_priv);
+#endif
+#ifndef __FreeBSD__
 	i915_teardown_sysfs(dev_priv);
 #endif
 	i915_guc_log_unregister(dev_priv);
@@ -2649,7 +2657,9 @@ static const struct drm_ioctl_desc i915_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(I915_GEM_USERPTR, i915_gem_userptr_ioctl, DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(I915_GEM_CONTEXT_GETPARAM, i915_gem_context_getparam_ioctl, DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(I915_GEM_CONTEXT_SETPARAM, i915_gem_context_setparam_ioctl, DRM_RENDER_ALLOW),
+#ifdef CONFIG_I915_PERF
 	DRM_IOCTL_DEF_DRV(I915_PERF_OPEN, i915_perf_open_ioctl, DRM_RENDER_ALLOW),
+#endif
 };
 
 static struct drm_driver driver = {

@@ -2862,10 +2862,7 @@ int i915_gem_reset_prepare(struct drm_i915_private *dev_priv)
 		 * prevents the race.
 		 */
 		tasklet_kill(&engine->irq_tasklet);
-#ifndef __FreeBSD__
-		/* XXX */
 		tasklet_disable(&engine->irq_tasklet);
-#endif
 
 		if (engine_stalled(engine)) {
 			request = i915_gem_find_active_request(engine);
@@ -3009,14 +3006,8 @@ void i915_gem_reset_finish(struct drm_i915_private *dev_priv)
 
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
-#ifdef __FreeBSD__
-	(void)engine;
-	(void)id;
-#else
-	/* XXX */
 	for_each_engine(engine, dev_priv, id)
 		tasklet_enable(&engine->irq_tasklet);
-#endif
 }
 
 static void nop_submit_request(struct drm_i915_gem_request *request)

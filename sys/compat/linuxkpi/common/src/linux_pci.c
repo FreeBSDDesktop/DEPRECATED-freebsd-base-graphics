@@ -94,6 +94,9 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 
 	vendor = pci_get_vendor(dev);
 	device = pci_get_device(dev);
+	
+	printf("%s] this pci dev: vendor: %x, device=%x\n",
+		   __func__, vendor, device);
 
 	spin_lock(&pci_lock);
 	list_for_each_entry(pdrv, &pci_drivers, links) {

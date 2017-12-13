@@ -57,14 +57,12 @@
 
 #define CONFIG_DRM_AMD_POWERPLAY 1
 
-/* // For dce_v6_0_disable_dce and to fix*/
-/* #define CONFIG_DRM_AMDGPU_SI 1 */
-/* // Just in case define this one too... (drm/amd/amgpu/dce_virtual.c) */
-/* #define CONFIG_DRM_AMDGPU_CIK 1 */
-
 
 // Let try to do without this one. Opens a can of worms.
 //#define CONFIG_LOCKDEP 1
 
+
+// Uncomment this or remove #ifdefs in i915_drv.c when enabling i915_perf
+//#define CONFIG_I915_PERF 
 
 #endif

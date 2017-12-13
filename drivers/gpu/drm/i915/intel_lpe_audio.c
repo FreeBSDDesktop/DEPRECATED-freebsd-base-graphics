@@ -64,6 +64,15 @@
 #include <linux/device.h>
 #include <linux/pci.h>
 
+#ifdef __FreeBSD__
+#include <linux/platform_device.h>
+#include <linux/irq.h>
+
+// Porting incomplete!! Omitted from build. 
+// Remove #ifdefs in intel_audio.c and add this file to Makefile to use.
+
+#endif
+
 #include "i915_drv.h"
 #include <linux/delay.h>
 #include <drm/intel_lpe_audio.h>
