@@ -142,6 +142,7 @@
 #include <drm/drm_mem_util.h>
 #include <drm/drm_mm.h>
 #include <dev/drm/drm_os_freebsd.h>
+#include <drm/drm_ioctl.h>
 #include <uapi/drm/drm_sarea.h>
 #include <drm/drm_vma_manager.h>
 #include <linux/atomic.h>
@@ -390,48 +391,6 @@ struct dma_buf_attachment;
 /*@{*/
 
 #define DRM_IF_VERSION(maj, min) (maj << 16 | min)
-
-/**
- * Ioctl function type.
- *
- * \param inode device inode.
- * \param file_priv DRM file private pointer.
- * \param cmd command.
- * \param arg argument.
- */
-typedef int drm_ioctl_t(struct drm_device *dev, void *data,
-			struct drm_file *file_priv);
-
-typedef int drm_ioctl_compat_t(struct file *filp, unsigned int cmd,
-			       unsigned long arg);
-
-#define DRM_IOCTL_NR(n)                ((n) & 0xff)
-
-
-#define DRM_MAJOR       226
-
-#define DRM_AUTH	0x1
-#define	DRM_MASTER	0x2
-#define DRM_ROOT_ONLY	0x4
-#define DRM_CONTROL_ALLOW 0x8
-#define DRM_UNLOCKED	0x10
-#define DRM_RENDER_ALLOW 0x20
-
-struct drm_ioctl_desc {
-	unsigned long cmd;
-	int flags;
-	drm_ioctl_t *func;
-	unsigned int cmd_drv;
-	char *name;
-};
-
-/**
- * Creates a driver or general drm_ioctl_desc array entry for the given
- * ioctl, for use by drm_ioctl().
- */
-
-#define DRM_IOCTL_DEF_DRV(ioctl, _func, _flags)			\
-	[DRM_IOCTL_NR(DRM_##ioctl)] = {.cmd = DRM_IOCTL_##ioctl, .func = _func, .flags = _flags, .cmd_drv = DRM_IOCTL_##ioctl, .name = #ioctl }
 
 /* Event queued up for userspace to read */
 struct drm_pending_event {

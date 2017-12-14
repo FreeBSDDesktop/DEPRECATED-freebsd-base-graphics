@@ -2161,6 +2161,10 @@ skip_thunk:
 
 		return (error);
 	}
+	case KDGETMODE:
+		*(int *)data = (vw->vw_flags & VWF_GRAPHICS) ?
+		    KD_GRAPHICS : KD_TEXT;
+		return (0);
 	case KDGKBMODE: {
 		error = 0;
 
@@ -2306,9 +2310,6 @@ skip_thunk:
 			sm->scrmap[i] = i;
 		return (0);
 	}
-	case KDGETMODE:
-		*(int *)data = vw->vw_flags & VWF_GRAPHICS ? KD_GRAPHICS : KD_TEXT;
-		return (0);
 	case KDSETMODE:
 		/*
 		 * FIXME: This implementation is incomplete compared to

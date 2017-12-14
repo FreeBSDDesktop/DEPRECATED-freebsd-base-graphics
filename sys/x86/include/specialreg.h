@@ -308,6 +308,15 @@
 #define	CPUID_EXTSTATE_XSAVES	0x00000008
 
 /*
+ * AMD extended function 8000_0007h ebx info
+ */
+#define	AMDRAS_MCA_OF_RECOV	0x00000001
+#define	AMDRAS_SUCCOR		0x00000002
+#define	AMDRAS_HW_ASSERT	0x00000004
+#define	AMDRAS_SCALABLE_MCA	0x00000008
+#define	AMDRAS_PFEH_SUPPORT	0x00000010
+
+/*
  * AMD extended function 8000_0007h edx info
  */
 #define	AMDPM_TS		0x00000001
@@ -320,6 +329,13 @@
 #define	AMDPM_HW_PSTATE		0x00000080
 #define	AMDPM_TSC_INVARIANT	0x00000100
 #define	AMDPM_CPB		0x00000200
+
+/*
+ * AMD extended function 8000_0008h ebx info (amd_extended_feature_extensions)
+ */
+#define	AMDFEID_CLZERO		0x00000001
+#define	AMDFEID_IRPERF		0x00000002
+#define	AMDFEID_XSAVEERPTR	0x00000004
 
 /*
  * AMD extended function 8000_0008h ecx info
@@ -531,6 +547,62 @@
 #define	MSR_IA32_XSS		0xda0
 
 /*
+ * Intel Processor Trace (PT) MSRs.
+ */
+#define	MSR_IA32_RTIT_OUTPUT_BASE	0x560	/* Trace Output Base Register (R/W) */
+#define	MSR_IA32_RTIT_OUTPUT_MASK_PTRS	0x561	/* Trace Output Mask Pointers Register (R/W) */
+#define	MSR_IA32_RTIT_CTL		0x570	/* Trace Control Register (R/W) */
+#define	 RTIT_CTL_TRACEEN	(1 << 0)
+#define	 RTIT_CTL_CYCEN		(1 << 1)
+#define	 RTIT_CTL_OS		(1 << 2)
+#define	 RTIT_CTL_USER		(1 << 3)
+#define	 RTIT_CTL_PWREVTEN	(1 << 4)
+#define	 RTIT_CTL_FUPONPTW	(1 << 5)
+#define	 RTIT_CTL_FABRICEN	(1 << 6)
+#define	 RTIT_CTL_CR3FILTER	(1 << 7)
+#define	 RTIT_CTL_TOPA		(1 << 8)
+#define	 RTIT_CTL_MTCEN		(1 << 9)
+#define	 RTIT_CTL_TSCEN		(1 << 10)
+#define	 RTIT_CTL_DISRETC	(1 << 11)
+#define	 RTIT_CTL_PTWEN		(1 << 12)
+#define	 RTIT_CTL_BRANCHEN	(1 << 13)
+#define	 RTIT_CTL_MTC_FREQ_S	14
+#define	 RTIT_CTL_MTC_FREQ(n)	((n) << RTIT_CTL_MTC_FREQ_S)
+#define	 RTIT_CTL_MTC_FREQ_M	(0xf << RTIT_CTL_MTC_FREQ_S)
+#define	 RTIT_CTL_CYC_THRESH_S	19
+#define	 RTIT_CTL_CYC_THRESH_M	(0xf << RTIT_CTL_CYC_THRESH_S)
+#define	 RTIT_CTL_PSB_FREQ_S	24
+#define	 RTIT_CTL_PSB_FREQ_M	(0xf << RTIT_CTL_PSB_FREQ_S)
+#define	 RTIT_CTL_ADDR_CFG_S(n) (32 + (n) * 4)
+#define	 RTIT_CTL_ADDR0_CFG_S	32
+#define	 RTIT_CTL_ADDR0_CFG_M	(0xfULL << RTIT_CTL_ADDR0_CFG_S)
+#define	 RTIT_CTL_ADDR1_CFG_S	36
+#define	 RTIT_CTL_ADDR1_CFG_M	(0xfULL << RTIT_CTL_ADDR1_CFG_S)
+#define	 RTIT_CTL_ADDR2_CFG_S	40
+#define	 RTIT_CTL_ADDR2_CFG_M	(0xfULL << RTIT_CTL_ADDR2_CFG_S)
+#define	 RTIT_CTL_ADDR3_CFG_S	44
+#define	 RTIT_CTL_ADDR3_CFG_M	(0xfULL << RTIT_CTL_ADDR3_CFG_S)
+#define	MSR_IA32_RTIT_STATUS		0x571	/* Tracing Status Register (R/W) */
+#define	 RTIT_STATUS_FILTEREN	(1 << 0)
+#define	 RTIT_STATUS_CONTEXTEN	(1 << 1)
+#define	 RTIT_STATUS_TRIGGEREN	(1 << 2)
+#define	 RTIT_STATUS_ERROR	(1 << 4)
+#define	 RTIT_STATUS_STOPPED	(1 << 5)
+#define	 RTIT_STATUS_PACKETBYTECNT_S	32
+#define	 RTIT_STATUS_PACKETBYTECNT_M	(0x1ffffULL << RTIT_STATUS_PACKETBYTECNT_S)
+#define	MSR_IA32_RTIT_CR3_MATCH		0x572	/* Trace Filter CR3 Match Register (R/W) */
+#define	MSR_IA32_RTIT_ADDR_A(n)		(0x580 + (n) * 2)
+#define	MSR_IA32_RTIT_ADDR_B(n)		(0x581 + (n) * 2)
+#define	MSR_IA32_RTIT_ADDR0_A		0x580	/* Region 0 Start Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR0_B		0x581	/* Region 0 End Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR1_A		0x582	/* Region 1 Start Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR1_B		0x583	/* Region 1 End Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR2_A		0x584	/* Region 2 Start Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR2_B		0x585	/* Region 2 End Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR3_A		0x586	/* Region 3 Start Address (R/W) */
+#define	MSR_IA32_RTIT_ADDR3_B		0x587	/* Region 3 End Address (R/W) */
+
+/*
  * Constants related to MSR's.
  */
 #define	APICBASE_RESERVED	0x000002ff
@@ -706,21 +778,22 @@
 #define	MC_CTL2_THRESHOLD	0x0000000000007fff
 #define	MC_CTL2_CMCI_EN		0x0000000040000000
 #define	MC_AMDNB_BANK		4
-#define	MC_MISC_AMDNB_VAL	0x8000000000000000	/* Counter presence valid */
-#define	MC_MISC_AMDNB_CNTP	0x4000000000000000	/* Counter present */
-#define	MC_MISC_AMDNB_LOCK	0x2000000000000000	/* Register locked */
-#define	MC_MISC_AMDNB_LVT_MASK	0x00f0000000000000	/* Extended LVT offset */
-#define	MC_MISC_AMDNB_LVT_SHIFT	52
-#define	MC_MISC_AMDNB_CNTEN	0x0008000000000000	/* Counter enabled */
-#define	MC_MISC_AMDNB_INT_MASK	0x0006000000000000	/* Interrupt type */
-#define	MC_MISC_AMDNB_INT_LVT	0x0002000000000000	/* Interrupt via Extended LVT */
-#define	MC_MISC_AMDNB_INT_SMI	0x0004000000000000	/* SMI */
-#define	MC_MISC_AMDNB_OVERFLOW	0x0001000000000000	/* Counter overflow */
-#define	MC_MISC_AMDNB_CNT_MASK	0x00000fff00000000	/* Counter value */
-#define	MC_MISC_AMDNB_CNT_SHIFT	32
-#define	MC_MISC_AMDNB_CNT_MAX	0xfff
-#define	MC_MISC_AMDNB_PTR_MASK	0x00000000ff000000	/* Pointer to additional registers */
-#define	MC_MISC_AMDNB_PTR_SHIFT	24
+#define	MC_MISC_AMD_VAL		0x8000000000000000	/* Counter presence valid */
+#define	MC_MISC_AMD_CNTP	0x4000000000000000	/* Counter present */
+#define	MC_MISC_AMD_LOCK	0x2000000000000000	/* Register locked */
+#define	MC_MISC_AMD_INTP	0x1000000000000000	/* Int. type can generate interrupts */
+#define	MC_MISC_AMD_LVT_MASK	0x00f0000000000000	/* Extended LVT offset */
+#define	MC_MISC_AMD_LVT_SHIFT	52
+#define	MC_MISC_AMD_CNTEN	0x0008000000000000	/* Counter enabled */
+#define	MC_MISC_AMD_INT_MASK	0x0006000000000000	/* Interrupt type */
+#define	MC_MISC_AMD_INT_LVT	0x0002000000000000	/* Interrupt via Extended LVT */
+#define	MC_MISC_AMD_INT_SMI	0x0004000000000000	/* SMI */
+#define	MC_MISC_AMD_OVERFLOW	0x0001000000000000	/* Counter overflow */
+#define	MC_MISC_AMD_CNT_MASK	0x00000fff00000000	/* Counter value */
+#define	MC_MISC_AMD_CNT_SHIFT	32
+#define	MC_MISC_AMD_CNT_MAX	0xfff
+#define	MC_MISC_AMD_PTR_MASK	0x00000000ff000000	/* Pointer to additional registers */
+#define	MC_MISC_AMD_PTR_SHIFT	24
 
 /*
  * The following four 3-byte registers control the non-cacheable regions.

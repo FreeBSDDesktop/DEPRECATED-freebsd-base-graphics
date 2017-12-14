@@ -123,7 +123,7 @@ evdev_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	if (ret != 0)
 		evdev_revoke_client(client);
 	/*
-	 * Unlock evdev here because non-sleepable lock held
+	 * Unlock evdev here because non-sleepable lock held 
 	 * while calling devfs_set_cdevpriv upsets WITNESS
 	 */
 	EVDEV_UNLOCK(evdev);

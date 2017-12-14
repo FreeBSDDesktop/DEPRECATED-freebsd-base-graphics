@@ -122,8 +122,7 @@ SYSCTL_ULONG(_vm, OID_AUTO, max_kernel_address, CTLFLAG_RD,
  *	a mapping on demand through vm_fault() will result in a panic. 
  */
 vm_offset_t
-kva_alloc(size)
-	vm_size_t size;
+kva_alloc(vm_size_t size)
 {
 	vm_offset_t addr;
 
@@ -144,9 +143,7 @@ kva_alloc(size)
  *	This routine may not block on kernel maps.
  */
 void
-kva_free(addr, size)
-	vm_offset_t addr;
-	vm_size_t size;
+kva_free(vm_offset_t addr, vm_size_t size)
 {
 
 	size = round_page(size);
@@ -175,6 +172,8 @@ kmem_alloc_attr(vmem_t *vmem, vm_size_t size, int flags, vm_paddr_t low,
 		return (0);
 	offset = addr - VM_MIN_KERNEL_ADDRESS;
 	pflags = malloc2vm_flags(flags) | VM_ALLOC_NOBUSY | VM_ALLOC_WIRED;
+	pflags &= ~(VM_ALLOC_NOWAIT | VM_ALLOC_WAITOK | VM_ALLOC_WAITFAIL);
+	pflags |= VM_ALLOC_NOWAIT;
 	VM_OBJECT_WLOCK(object);
 	for (i = 0; i < size; i += PAGE_SIZE) {
 		tries = 0;
@@ -230,6 +229,8 @@ kmem_alloc_contig(struct vmem *vmem, vm_size_t size, int flags, vm_paddr_t low,
 		return (0);
 	offset = addr - VM_MIN_KERNEL_ADDRESS;
 	pflags = malloc2vm_flags(flags) | VM_ALLOC_NOBUSY | VM_ALLOC_WIRED;
+	pflags &= ~(VM_ALLOC_NOWAIT | VM_ALLOC_WAITOK | VM_ALLOC_WAITFAIL);
+	pflags |= VM_ALLOC_NOWAIT;
 	npages = atop(size);
 	VM_OBJECT_WLOCK(object);
 	tries = 0;
@@ -341,10 +342,13 @@ kmem_back(vm_object_t object, vm_offset_t addr, vm_size_t size, int flags)
 
 	offset = addr - VM_MIN_KERNEL_ADDRESS;
 	pflags = malloc2vm_flags(flags) | VM_ALLOC_NOBUSY | VM_ALLOC_WIRED;
+	pflags &= ~(VM_ALLOC_NOWAIT | VM_ALLOC_WAITOK | VM_ALLOC_WAITFAIL);
+	if (flags & M_WAITOK)
+		pflags |= VM_ALLOC_WAITFAIL;
 
 	i = 0;
-retry:
 	VM_OBJECT_WLOCK(object);
+retry:
 	mpred = vm_radix_lookup_le(&object->rtree, atop(offset + i));
 	for (; i < size; i += PAGE_SIZE, mpred = m) {
 		m = vm_page_alloc_after(object, atop(offset + i), pflags,
@@ -356,11 +360,9 @@ retry:
 		 * aren't on any queues.
 		 */
 		if (m == NULL) {
-			VM_OBJECT_WUNLOCK(object);
-			if ((flags & M_NOWAIT) == 0) {
-				VM_WAIT;
+			if ((flags & M_NOWAIT) == 0)
 				goto retry;
-			}
+			VM_OBJECT_WUNLOCK(object);
 			kmem_unback(object, addr, i);
 			return (KERN_NO_SPACE);
 		}
@@ -433,9 +435,7 @@ kmem_free(struct vmem *vmem, vm_offset_t addr, vm_size_t size)
  *	This routine may block.
  */
 vm_offset_t
-kmap_alloc_wait(map, size)
-	vm_map_t map;
-	vm_size_t size;
+kmap_alloc_wait(vm_map_t map, vm_size_t size)
 {
 	vm_offset_t addr;
 
@@ -473,10 +473,7 @@ kmap_alloc_wait(map, size)
  *	waiting for memory in that map.
  */
 void
-kmap_free_wakeup(map, addr, size)
-	vm_map_t map;
-	vm_offset_t addr;
-	vm_size_t size;
+kmap_free_wakeup(vm_map_t map, vm_offset_t addr, vm_size_t size)
 {
 
 	vm_map_lock(map);
@@ -520,8 +517,7 @@ kmem_init_zero_region(void)
  *	`start' as allocated, and the range between `start' and `end' as free.
  */
 void
-kmem_init(start, end)
-	vm_offset_t start, end;
+kmem_init(vm_offset_t start, vm_offset_t end)
 {
 	vm_map_t m;
 

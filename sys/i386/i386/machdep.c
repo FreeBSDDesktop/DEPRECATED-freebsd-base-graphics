@@ -430,9 +430,6 @@ osendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	 * Copy the sigframe out to the user's stack.
 	 */
 	if (copyout(&sf, fp, sizeof(*fp)) != 0) {
-#ifdef DEBUG
-		printf("process %ld has trashed its stack\n", (long)p->p_pid);
-#endif
 		PROC_LOCK(p);
 		sigexit(td, SIGILL);
 	}
@@ -559,9 +556,6 @@ freebsd4_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	 * Copy the sigframe out to the user's stack.
 	 */
 	if (copyout(&sf, sfp, sizeof(*sfp)) != 0) {
-#ifdef DEBUG
-		printf("process %ld has trashed its stack\n", (long)p->p_pid);
-#endif
 		PROC_LOCK(p);
 		sigexit(td, SIGILL);
 	}
@@ -725,9 +719,6 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	    (xfpusave != NULL && copyout(xfpusave,
 	    (void *)sf.sf_uc.uc_mcontext.mc_xfpustate, xfpusave_len)
 	    != 0)) {
-#ifdef DEBUG
-		printf("process %ld has trashed its stack\n", (long)p->p_pid);
-#endif
 		PROC_LOCK(p);
 		sigexit(td, SIGILL);
 	}
@@ -1132,6 +1123,15 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	else
 		mtx_unlock_spin(&dt_lock);
   
+	/*
+	 * Reset the fs and gs bases.  The values from the old address
+	 * space do not make sense for the new program.  In particular,
+	 * gsbase might be the TLS base for the old program but the new
+	 * program has no TLS now.
+	 */
+	set_fsbase(td, 0);
+	set_gsbase(td, 0);
+
 	bzero((char *)regs, sizeof(struct trapframe));
 	regs->tf_eip = imgp->entry_addr;
 	regs->tf_esp = stack;
@@ -2842,7 +2842,6 @@ static int
 set_fpcontext(struct thread *td, mcontext_t *mcp, char *xfpustate,
     size_t xfpustate_len)
 {
-	union savefpu *fpstate;
 	int error;
 
 	if (mcp->mc_fpformat == _MC_FPFMT_NODEV)
@@ -2856,10 +2855,8 @@ set_fpcontext(struct thread *td, mcontext_t *mcp, char *xfpustate,
 		error = 0;
 	} else if (mcp->mc_ownedfp == _MC_FPOWNED_FPU ||
 	    mcp->mc_ownedfp == _MC_FPOWNED_PCB) {
-		fpstate = (union savefpu *)&mcp->mc_fpstate;
-		if (cpu_fxsr)
-			fpstate->sv_xmm.sv_env.en_mxcsr &= cpu_mxcsr_mask;
-		error = npxsetregs(td, fpstate, xfpustate, xfpustate_len);
+		error = npxsetregs(td, (union savefpu *)&mcp->mc_fpstate,
+		    xfpustate, xfpustate_len);
 	} else
 		return (EINVAL);
 	return (error);

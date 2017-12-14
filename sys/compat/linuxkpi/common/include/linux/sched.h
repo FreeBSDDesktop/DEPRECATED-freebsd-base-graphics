@@ -63,21 +63,16 @@
 struct task_struct {
 	struct thread *task_thread;
 	struct mm_struct *mm;
-
-	/* kthread fields */
 	linux_task_fn_t *task_fn;
 	void   *task_data;
 	int	task_ret;
 	atomic_t usage;
-	atomic_t kthread_flags;
-
 	atomic_t state;
+	atomic_t kthread_flags;
 	pid_t	pid;	/* BSD thread ID */
-	const char *comm;
-
+	const char    *comm;
 	void   *bsd_ioctl_data;
 	unsigned bsd_ioctl_len;
-
 	struct completion parked;
 	struct completion exited;
 	TAILQ_ENTRY(task_struct) rcu_entry;
@@ -97,11 +92,10 @@ struct task_struct {
 #define	put_pid(x)		do { } while (0)
 #define	current_euid()	(curthread->td_ucred->cr_uid)
 
-#define	set_current_state(x)	set_task_state(current, x)
-#define	__set_current_state(x)	__set_task_state(current, x)
-
-#define	set_task_state(task, x) atomic_set(&(task)->state, x)
-#define	__set_task_state(task, x) do { (task)->state.counter = (x); } while (0)
+#define	set_task_state(task, x)		atomic_set(&(task)->state, (x))
+#define	__set_task_state(task, x)	((task)->state.counter = (x))
+#define	set_current_state(x)		set_task_state(current, x)
+#define	__set_current_state(x)		__set_task_state(current, x)
 
 static inline void
 get_task_struct(struct task_struct *task)
@@ -127,9 +121,10 @@ local_clock(void)
 
 #define	cond_resched()	if (!cold)	sched_relinquish(curthread)
 
-#define	need_resched()	(curthread->td_flags & TDF_NEEDRESCHED)
 #define	yield()		kern_yield(PRI_UNCHANGED)
 #define	sched_yield()	sched_relinquish(curthread)
+
+#define	need_resched() (curthread->td_flags & TDF_NEEDRESCHED)
 
 bool linux_signal_pending(struct task_struct *task);
 bool linux_fatal_signal_pending(struct task_struct *task);

@@ -20,6 +20,7 @@ _PRIVATELIBS=	\
 		event \
 		heimipcc \
 		heimipcs \
+		ifconfig \
 		ldns \
 		sqlite3 \
 		ssh \
@@ -42,6 +43,7 @@ _INTERNALLIBS=	\
 		opts \
 		parse \
 		pe \
+		pmcstat \
 		readline \
 		sl \
 		sm \
@@ -76,6 +78,7 @@ _LIBRARIES=	\
 		cap_pwd \
 		cap_random \
 		cap_sysctl \
+		cap_syslog \
 		com_err \
 		compiler_rt \
 		crypt \
@@ -108,7 +111,6 @@ _LIBRARIES=	\
 		heimntlm \
 		heimsqlite \
 		hx509 \
-		ifconfig \
 		ipsec \
 		jail \
 		kadm5clnt \
@@ -238,6 +240,7 @@ _DP_cap_grp=	nv
 _DP_cap_pwd=	nv
 _DP_cap_random=	nv
 _DP_cap_sysctl=	nv
+_DP_cap_syslog=	nv
 _DP_pjdlog=	util
 _DP_opie=	md
 _DP_usb=	pthread
@@ -465,6 +468,9 @@ LIBBSNMPTOOLS?=	${LIBBSNMPTOOLSDIR}/libbsnmptools.a
 LIBAMUDIR=	${OBJTOP}/usr.sbin/amd/libamu
 LIBAMU?=	${LIBAMUDIR}/libamu.a
 
+LIBPMCSTATDIR=	${OBJTOP}/lib/libpmcstat
+LIBPMCSTAT?=	${LIBPMCSTATDIR}/libpmcstat.a
+
 # Define a directory for each library.  This is useful for adding -L in when
 # not using a --sysroot or for meta mode bootstrapping when there is no
 # Makefile.depend.  These are sorted by directory.
@@ -526,6 +532,7 @@ LIBCAP_GRPDIR=	${OBJTOP}/lib/libcasper/services/cap_grp
 LIBCAP_PWDDIR=	${OBJTOP}/lib/libcasper/services/cap_pwd
 LIBCAP_RANDOMDIR=	${OBJTOP}/lib/libcasper/services/cap_random
 LIBCAP_SYSCTLDIR=	${OBJTOP}/lib/libcasper/services/cap_sysctl
+LIBCAP_SYSLOGDIR=	${OBJTOP}/lib/libcasper/services/cap_syslog
 LIBBSDXMLDIR=	${OBJTOP}/lib/libexpat
 LIBKVMDIR=	${OBJTOP}/lib/libkvm
 LIBPTHREADDIR=	${OBJTOP}/lib/libthr

@@ -182,7 +182,6 @@ struct td_sched;
 struct thread;
 struct trapframe;
 struct turnstile;
-struct socket;
 
 /*
  * XXX: Does this belong in resource.h or resourcevar.h instead?
@@ -955,6 +954,7 @@ extern struct proc *initproc, *pageproc; /* Process slots for init, pager. */
 extern struct uma_zone *proc_zone;
 
 struct	proc *pfind(pid_t);		/* Find process by id. */
+struct	proc *pfind_any(pid_t);		/* Find (zombie) process by id. */
 struct	proc *pfind_locked(pid_t pid);
 struct	pgrp *pgfind(pid_t);		/* Find process group by id. */
 struct	proc *zpfind(pid_t);		/* Find zombie process by id. */

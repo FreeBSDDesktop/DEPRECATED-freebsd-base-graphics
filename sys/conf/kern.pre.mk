@@ -24,11 +24,14 @@ _srcconf_included_:
 .MAKE.MODE+=	curdirOk=yes
 .endif
 
-.if defined(NO_OBJ) || ${MK_AUTO_OBJ} == "yes"
-NO_OBJ=		t
+# The kernel build always expects .OBJDIR=.CURDIR.
+.OBJDIR: ${.CURDIR}
+
+.if defined(NO_OBJWALK) || ${MK_AUTO_OBJ} == "yes"
+NO_OBJWALK=		t
 NO_MODULES_OBJ=	t
 .endif
-.if !defined(NO_OBJ)
+.if !defined(NO_OBJWALK)
 _obj=		obj
 .endif
 
@@ -77,7 +80,7 @@ NOSTDINC= -nostdinc
 
 INCLUDES= ${NOSTDINC} ${INCLMAGIC} -I. -I$S
 
-CFLAGS=	${COPTFLAGS} ${DEBUG} -Wno-varargs
+CFLAGS=	${COPTFLAGS} ${DEBUG}
 CFLAGS+= ${INCLUDES} -D_KERNEL -DHAVE_KERNEL_OPTION_HEADERS -include opt_global.h
 CFLAGS_PARAM_INLINE_UNIT_GROWTH?=100
 CFLAGS_PARAM_LARGE_FUNCTION_GROWTH?=1000
@@ -139,7 +142,11 @@ CDDL_CFLAGS+=	-include $S/cddl/compat/opensolaris/sys/debug_compat.h
 CDDL_C=		${CC} -c ${CDDL_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
 
 # Special flags for managing the compat compiles for ZFS
-ZFS_CFLAGS=	-DBUILDING_ZFS -I$S/cddl/contrib/opensolaris/uts/common/fs/zfs -I$S/cddl/contrib/opensolaris/uts/common/zmod -I$S/cddl/contrib/opensolaris/common/zfs ${CDDL_CFLAGS}
+ZFS_CFLAGS=	-DBUILDING_ZFS -I$S/cddl/contrib/opensolaris/uts/common/fs/zfs
+ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/common/fs/zfs/lua
+ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/common/zmod
+ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/common/zfs
+ZFS_CFLAGS+=	${CDDL_CFLAGS}
 ZFS_ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${ZFS_CFLAGS}
 ZFS_C=		${CC} -c ${ZFS_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
 ZFS_S=		${CC} -c ${ZFS_ASM_CFLAGS} ${WERROR} ${.IMPSRC}
@@ -251,6 +258,7 @@ EMBEDFS_ARCH.${MACHINE_ARCH}!= sed -n '/OUTPUT_ARCH/s/.*(\(.*\)).*/\1/p' ${LDSCR
 
 EMBEDFS_FORMAT.arm?=		elf32-littlearm
 EMBEDFS_FORMAT.armv6?=		elf32-littlearm
+EMBEDFS_FORMAT.armv7?=		elf32-littlearm
 EMBEDFS_FORMAT.aarch64?=	elf64-littleaarch64
 EMBEDFS_FORMAT.mips?=		elf32-tradbigmips
 EMBEDFS_FORMAT.mipsel?=		elf32-tradlittlemips

@@ -2,7 +2,7 @@
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
- * Copyright (c) 2013, 2014 Mellanox Technologies, Ltd.
+ * Copyright (c) 2013-2017 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,18 +31,15 @@
 #ifndef	_ATOMIC_LONG_H_
 #define	_ATOMIC_LONG_H_
 
-#include <sys/cdefs.h>
+#include <linux/compiler.h>
 #include <sys/types.h>
-
-#include <linux/bitops.h>
-
 #include <machine/atomic.h>
 
-#include <asm/atomic64.h>
+#define	ATOMIC_LONG_INIT(x)	{ .counter = (x) }
 
-#if BITS_PER_LONG == 64
-typedef atomic64_t atomic_long_t;
-#endif
+typedef struct {
+	volatile long counter;
+} atomic_long_t;
 
 #define	atomic_long_add(i, v)		atomic_long_add_return((i), (v))
 #define	atomic_long_inc_return(v)	atomic_long_add_return(1, (v))
@@ -57,13 +54,13 @@ atomic_long_add_return(long i, atomic_long_t *v)
 static inline void
 atomic_long_set(atomic_long_t *v, long i)
 {
-	atomic_store_rel_long(&v->counter, i);
+	WRITE_ONCE(v->counter, i);
 }
 
 static inline long
 atomic_long_read(atomic_long_t *v)
 {
-	return atomic_load_acq_long(&v->counter);
+	return READ_ONCE(v->counter);
 }
 
 static inline long

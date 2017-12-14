@@ -160,6 +160,7 @@ DRIVER_MODULE(hwpstate, cpu, hwpstate_driver, hwpstate_devclass, 0, 0);
 static int
 hwpstate_goto_pstate(device_t dev, int pstate)
 {
+	sbintime_t sbt;
 	int i;
 	uint64_t msr;
 	int j;
@@ -170,7 +171,7 @@ hwpstate_goto_pstate(device_t dev, int pstate)
 	/* get the current pstate limit */
 	msr = rdmsr(MSR_AMD_10H_11H_LIMIT);
 	limit = AMD_10H_11H_GET_PSTATE_LIMIT(msr);
-	if(limit > id)
+	if (limit > id)
 		id = limit;
 
 	/*
@@ -184,7 +185,7 @@ hwpstate_goto_pstate(device_t dev, int pstate)
 		sched_bind(curthread, i);
 		thread_unlock(curthread);
 		HWPSTATE_DEBUG(dev, "setting P%d-state on cpu%d\n",
-			id, PCPU_GET(cpuid));
+		    id, PCPU_GET(cpuid));
 		/* Go To Px-state */
 		wrmsr(MSR_AMD_10H_11H_CONTROL, id);
 	}
@@ -194,13 +195,14 @@ hwpstate_goto_pstate(device_t dev, int pstate)
 		sched_bind(curthread, i);
 		thread_unlock(curthread);
 		/* wait loop (100*100 usec is enough ?) */
-		for(j = 0; j < 100; j++){
+		for (j = 0; j < 100; j++){
 			/* get the result. not assure msr=id */
 			msr = rdmsr(MSR_AMD_10H_11H_STATUS);
-			if(msr == id){
+			if (msr == id)
 				break;
-			}
-			DELAY(100);
+			sbt = SBT_1MS / 10;
+			tsleep_sbt(dev, PZERO, "pstate_goto", sbt,
+			    sbt >> tc_precexp, 0);
 		}
 		HWPSTATE_DEBUG(dev, "result: P%d-state on cpu%d\n",
 		    (int)msr, PCPU_GET(cpuid));
@@ -422,15 +424,12 @@ hwpstate_get_info_from_msr(device_t dev)
 
 		/* Convert fid/did to frequency. */
 		switch(family) {
-		case 0x15:
-			/* fid/did to frequency */
-                        hwpstate_set[i].freq = 100 * (fid + 0x08) / (1 << did);
-			break;
 		case 0x11:
 			hwpstate_set[i].freq = (100 * (fid + 0x08)) >> did;
 			break;
 		case 0x10:
 		case 0x12:
+		case 0x15:
 		case 0x16:
 			hwpstate_set[i].freq = (100 * (fid + 0x10)) >> did;
 			break;

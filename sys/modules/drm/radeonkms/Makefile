@@ -69,7 +69,6 @@ SRCS	= \
 	radeon_gem.c \
 	radeon_i2c.c \
 	radeon_ib.c \
-	radeon_ioc32.c \
 	radeon_irq_kms.c \
 	radeon_kfd.c \
 	radeon_kms.c \
@@ -119,6 +118,7 @@ SRCS	= \
 	vce_v2_0.c
 
 CFLAGS+= -I${SRCTOP}/sys
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/dummy/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/gplv2/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include/drm
@@ -168,7 +168,6 @@ CWARNFLAGS.radeon_clocks.c=	-Wno-missing-prototypes
 CWARNFLAGS.radeon_device.c=	-Wno-cast-qual -Wno-missing-prototypes
 CWARNFLAGS.radeon_dp_mst.c=	-Wno-missing-prototypes
 CWARNFLAGS.radeon_gem.c=	-Wno-missing-prototypes
-CWARNFLAGS.radeon_ioc32.c=	-Wno-missing-prototypes -Wno-int-conversion
 CWARNFLAGS.radeon_irq_kms.c=	-Wno-missing-prototypes
 CWARNFLAGS.radeon_kms.c=	-Wno-missing-prototypes
 CWARNFLAGS.radeon_legacy_encoders.c=	-Wno-missing-prototypes

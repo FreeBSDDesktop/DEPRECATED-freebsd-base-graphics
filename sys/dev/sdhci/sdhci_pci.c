@@ -144,7 +144,7 @@ static const struct sdhci_device {
 	{ 0,		0xffff,	NULL,
 	    0 }
 };
- 
+
 struct sdhci_pci_softc {
 	u_int		quirks;		/* Chip specific quirks */
 	struct resource *irq_res;	/* IRQ resource */
@@ -395,11 +395,7 @@ sdhci_pci_attach(device_t dev)
 	pci_enable_busmaster(dev);
 	/* Process cards detection. */
 	for (i = 0; i < sc->num_slots; i++) {
-#ifdef MMCCAM
-		sdhci_cam_start_slot(&sc->slots[i]);
-#else
 		sdhci_start_slot(&sc->slots[i]);
-#endif
 	}
 
 	return (0);

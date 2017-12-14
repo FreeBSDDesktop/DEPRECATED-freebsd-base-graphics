@@ -154,7 +154,7 @@
 
 /* Current ACPICA subsystem version in YYYYMMDD format */
 
-#define ACPI_CA_VERSION                 0x20170728
+#define ACPI_CA_VERSION                 0x20171110
 
 #include <contrib/dev/acpica/include/acconfig.h>
 #include <contrib/dev/acpica/include/actypes.h>
@@ -370,11 +370,11 @@ ACPI_INIT_GLOBAL (UINT8,            AcpiGbl_OsiData, 0);
 ACPI_INIT_GLOBAL (BOOLEAN,          AcpiGbl_ReducedHardware, FALSE);
 
 /*
- * Maximum number of While() loop iterations before forced method abort.
+ * Maximum timeout for While() loop iterations before forced method abort.
  * This mechanism is intended to prevent infinite loops during interpreter
  * execution within a host kernel.
  */
-ACPI_INIT_GLOBAL (UINT32,           AcpiGbl_MaxLoopIterations, ACPI_MAX_LOOP_COUNT);
+ACPI_INIT_GLOBAL (UINT32,           AcpiGbl_MaxLoopIterations, ACPI_MAX_LOOP_TIMEOUT);
 
 /*
  * This mechanism is used to trace a specified AML method. The method is
@@ -695,14 +695,6 @@ AcpiGetTableHeader (
 
 ACPI_EXTERNAL_RETURN_STATUS (
 ACPI_STATUS
-AcpiGetTableWithSize (
-    ACPI_STRING             Signature,
-    UINT32                  Instance,
-    ACPI_TABLE_HEADER       **OutTable,
-    ACPI_SIZE               *TblSize))
-
-ACPI_EXTERNAL_RETURN_STATUS (
-ACPI_STATUS
 AcpiGetTable (
     ACPI_STRING             Signature,
     UINT32                  Instance,
@@ -786,14 +778,6 @@ AcpiGetData (
     ACPI_HANDLE             Object,
     ACPI_OBJECT_HANDLER     Handler,
     void                    **Data))
-
-ACPI_EXTERNAL_RETURN_STATUS (
-ACPI_STATUS
-AcpiGetDataFull (
-    ACPI_HANDLE             Object,
-    ACPI_OBJECT_HANDLER     Handler,
-    void                    **Data,
-    void (*Callback)(void *)))
 
 ACPI_EXTERNAL_RETURN_STATUS (
 ACPI_STATUS

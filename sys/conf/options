@@ -432,7 +432,6 @@ IPSEC_SUPPORT		opt_ipsec.h
 IPSTEALTH
 KRPC
 LIBALIAS
-LIBMBPOOL
 LIBMCHAIN
 MBUF_PROFILING
 MBUF_STRESS_TEST
@@ -999,3 +998,6 @@ HN_DEBUG	opt_hn.h
 MMCCAM
 # Encrypted kernel crash dumps
 EKCD		opt_ekcd.h
+
+# NVME options
+NVME_USE_NVD	opt_nvme.h

@@ -27,9 +27,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-
-#ifdef CONFIG_COMPAT // Added for 4.11 by johalun 20170913
-
 #include <linux/compat.h>
 
 #include <drm/drmP.h>
@@ -425,5 +422,3 @@ long radeon_kms_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
 	return ret;
 }
-
-#endif

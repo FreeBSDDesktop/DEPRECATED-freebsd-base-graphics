@@ -127,6 +127,7 @@ SRCS	= \
 
 CLEANFILES+= ${KMOD}.ko.full ${KMOD}.ko.debug
 
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/dummy/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/gplv2/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include/uapi

@@ -127,22 +127,13 @@ dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_handle,
 	size_t align;
 	void *mem;
 
-	if (dev->dma_mask)
+	if (dev != NULL && dev->dma_mask)
 		high = *dev->dma_mask;
 	else if (flag & GFP_DMA32)
 		high = BUS_SPACE_MAXADDR_32BIT;
 	else
 		high = BUS_SPACE_MAXADDR;
-#ifdef __notyet__
-	/* the linux dma-api documentation indicates no alignment
-	 * requirements - users with alignment requirements are
-	 * expected to allocate a dma pool, which in some respects
-	 * is similar to a busdma tag
-	 */
 	align = PAGE_SIZE << get_order(size);
-#else
-	align = PAGE_SIZE;
-#endif	
 	mem = (void *)kmem_alloc_contig(kmem_arena, size, flag, 0, high, align,
 	    0, VM_MEMATTR_DEFAULT);
 	if (mem)

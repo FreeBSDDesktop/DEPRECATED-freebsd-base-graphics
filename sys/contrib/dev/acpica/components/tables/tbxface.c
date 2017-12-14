@@ -300,10 +300,13 @@ AcpiReallocateRootTable (
 
 
     /*
-     * Only reallocate the root table if the host provided a static buffer
-     * for the table array in the call to AcpiInitializeTables.
+     * If there are tables unverified, it is required to reallocate the
+     * root table list to clean up invalid table entries. Otherwise only
+     * reallocate the root table list if the host provided a static buffer
+     * for the table array in the call to AcpiInitializeTables().
      */
-    if (AcpiGbl_RootTableList.Flags & ACPI_ROOT_ORIGIN_ALLOCATED)
+    if ((AcpiGbl_RootTableList.Flags & ACPI_ROOT_ORIGIN_ALLOCATED) &&
+        AcpiGbl_EnableTableValidation)
     {
         return_ACPI_STATUS (AE_SUPPORT);
     }
@@ -449,12 +452,11 @@ ACPI_EXPORT_SYMBOL (AcpiGetTableHeader)
 
 /*******************************************************************************
  *
- * FUNCTION:    AcpiGetTableWithSize
+ * FUNCTION:    AcpiGetTable
  *
  * PARAMETERS:  Signature           - ACPI signature of needed table
  *              Instance            - Which instance (for SSDTs)
  *              OutTable            - Where the pointer to the table is returned
- *              TblSize             - Size of the table
  *
  * RETURN:      Status and pointer to the requested table
  *
@@ -469,11 +471,10 @@ ACPI_EXPORT_SYMBOL (AcpiGetTableHeader)
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiGetTableWithSize (
+AcpiGetTable (
     char                    *Signature,
     UINT32                  Instance,
-    ACPI_TABLE_HEADER       **OutTable,
-    ACPI_SIZE		    *TblSize)
+    ACPI_TABLE_HEADER       **OutTable)
 {
     UINT32                  i;
     UINT32                  j;
@@ -566,7 +567,7 @@ AcpiPutTable (
 
         if (TableDesc->Pointer != Table)
         {
-		continue;
+            continue;
         }
 
         AcpiTbPutTable (TableDesc);
@@ -576,36 +577,8 @@ AcpiPutTable (
     (void) AcpiUtReleaseMutex (ACPI_MTX_TABLES);
     return_VOID;
 }
+
 ACPI_EXPORT_SYMBOL (AcpiPutTable)
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiGetTable
- *
- * PARAMETERS:  Signature           - ACPI signature of needed table
- *              Instance            - Which instance (for SSDTs)
- *              OutTable            - Where the pointer to the table is returned
- *
- * RETURN:      Status and pointer to the requested table
- *
- * DESCRIPTION: Finds and verifies an ACPI table. Table must be in the
- *              RSDT/XSDT.
- *
- ******************************************************************************/
-
-ACPI_STATUS
-AcpiGetTable (
-    char                    *Signature,
-    UINT32                  Instance,
-    ACPI_TABLE_HEADER       **OutTable)
-{
-    ACPI_SIZE             Size;
-
-    return (AcpiGetTableWithSize(Signature, Instance, OutTable, &Size));
-}
-
-ACPI_EXPORT_SYMBOL (AcpiGetTable)
-
 
 
 /*******************************************************************************

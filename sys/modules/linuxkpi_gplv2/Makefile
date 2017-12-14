@@ -36,6 +36,7 @@ SRCS+=	bus_if.h		\
 	opt_acpi.h
 
 CFLAGS+= -include ${SRCTOP}/sys/dev/drm/drm_os_config.h
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/dummy/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/gplv2/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= '-DKBUILD_MODNAME="${KMOD}"'
