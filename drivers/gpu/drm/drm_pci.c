@@ -34,8 +34,6 @@
 #ifdef __FreeBSD__
 #define aper_base ai_aperture_base
 #define aper_size ai_aperture_size
-#define pci_register_driver linux_pci_register_driver
-#define pci_unregister_driver linux_pci_unregister_driver
 
 static void
 drm_pci_busdma_callback(void *arg, bus_dma_segment_t *segs, int nsegs, int error)

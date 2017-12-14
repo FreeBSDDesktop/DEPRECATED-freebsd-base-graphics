@@ -29,8 +29,6 @@
 
 #include "i915_drv.h"
 
-#define pci_register_driver linux_pci_register_driver
-
 #define GEN_DEFAULT_PIPEOFFSETS \
 	.pipe_offsets = { PIPE_A_OFFSET, PIPE_B_OFFSET, \
 			  PIPE_C_OFFSET, PIPE_EDP_OFFSET }, \

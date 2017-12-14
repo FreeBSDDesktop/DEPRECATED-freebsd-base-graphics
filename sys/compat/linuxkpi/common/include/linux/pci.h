@@ -42,7 +42,6 @@
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pci_private.h>
-#include <sys/resourcevar.h>
 
 #include <machine/resource.h>
 
@@ -51,19 +50,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/compiler.h>
 #include <linux/errno.h>
-#include <linux/kobject.h>
-
 #include <asm/atomic.h>
 #include <linux/device.h>
-
-#define PCI_BASE_CLASS_DISPLAY		0x03
-#define PCI_CLASS_DISPLAY_VGA		0x0300
-#define PCI_CLASS_DISPLAY_XGA		0x0301
-#define PCI_CLASS_DISPLAY_3D		0x0302
-#define PCI_CLASS_DISPLAY_OTHER		0x0380
-
-#define PCI_BASE_CLASS_BRIDGE		0x06
-#define PCI_CLASS_BRIDGE_ISA		0x0601
 
 struct pci_device_id {
 	uint32_t	vendor;
@@ -163,11 +151,16 @@ struct pci_device_id {
 #define	IORESOURCE_IO	(1 << SYS_RES_IOPORT)
 #define	IORESOURCE_IRQ	(1 << SYS_RES_IRQ)
 
+enum pci_bus_speed {
+	PCI_SPEED_UNKNOWN = -1,
+	PCIE_SPEED_2_5GT,
+	PCIE_SPEED_5_0GT,
+	PCIE_SPEED_8_0GT,
+};
+
 enum pcie_link_width {
 	PCIE_LNK_WIDTH_UNKNOWN = 0xFF,
 };
-
-#define	DEVICE_COUNT_RESOURCE	5
 
 typedef int pci_power_t;
 
@@ -178,14 +171,6 @@ typedef int pci_power_t;
 #define PCI_D3cold	4
 
 #define PCI_POWER_ERROR	PCI_POWERSTATE_UNKNOWN
-
-/* Remember to update this when the list above changes! */
-extern const char *pci_power_names[];
-
-static inline const char *pci_power_name(pci_power_t state)
-{
-	return pci_power_names[1 + (int) state];
-}
 
 struct pci_dev;
 
@@ -200,9 +185,14 @@ struct pci_driver {
 	void (*shutdown) (struct pci_dev *dev);		/* Device shutdown */
 	driver_t			bsddriver;
 	devclass_t			bsdclass;
-	char				*busname;
-	struct device_driver	driver;
-        const struct pci_error_handlers       *err_handler;
+	struct device_driver		driver;
+	const struct pci_error_handlers       *err_handler;
+	bool				isdrm;
+};
+
+struct pci_bus {
+	struct pci_dev	*self;
+	int		number;
 };
 
 extern struct list_head pci_drivers;
@@ -211,39 +201,20 @@ extern spinlock_t pci_lock;
 
 #define	__devexit_p(x)	x
 
-struct pci_bus {
-	struct list_head node;		/* node in list of buses */
-	struct pci_bus	*parent;	/* parent bus this bridge is on */
-	struct list_head children;	/* list of child buses */
-	struct list_head devices;	/* list of devices on this bus */
-	struct pci_dev	*self;		/* bridge device as seen by parent */
-	struct list_head slots;		/* list of slots on this bus */
-	struct list_head resources;	/* address space routed to this bus */
-
-	struct pci_ops	*ops;		/* configuration access functions */
-
-	unsigned char	number;		/* bus number */
-	struct device		dev;
-};
-
 struct pci_dev {
-	struct pci_bus	*bus;		/* bus this device is on */
-
 	struct device		dev;
-
 	struct list_head	links;
 	struct pci_driver	*pdrv;
+	struct pci_bus		*bus;
 	uint64_t		dma_mask;
-	unsigned int		devfn;
 	uint16_t		device;
 	uint16_t		vendor;
-	unsigned int		irq;
-	uint16_t		subsystem_vendor; /* XXXMJ are these set? */
+	uint16_t		subsystem_vendor;
 	uint16_t		subsystem_device;
+	unsigned int		irq;
+	unsigned int		devfn;
 	uint32_t		class;
 	uint8_t			revision;
-
-	unsigned int		msi_enabled:1;
 };
 
 static inline struct resource_list_entry *
@@ -538,8 +509,12 @@ pci_write_config_dword(struct pci_dev *pdev, int where, u32 val)
 	return (0);
 }
 
-extern int linux_pci_register_driver(struct pci_driver *pdrv);
-extern void linux_pci_unregister_driver(struct pci_driver *pdrv);
+int	linux_pci_register_driver(struct pci_driver *pdrv);
+int	linux_pci_register_drm_driver(struct pci_driver *pdrv);
+void	linux_pci_unregister_driver(struct pci_driver *pdrv);
+
+#define	pci_register_driver(pdrv)	linux_pci_register_driver(pdrv)
+#define	pci_unregister_driver(pdrv)	linux_pci_unregister_driver(pdrv)
 
 struct msix_entry {
 	int entry;
@@ -844,6 +819,14 @@ pcie_capability_write_word(struct pci_dev *dev, int pos, u16 val)
                 return 0;
 
         return pci_write_config_word(dev, pci_pcie_cap(dev) + pos, val);
+}
+
+static inline int pcie_get_minimum_link(struct pci_dev *dev,
+    enum pci_bus_speed *speed, enum pcie_link_width *width)
+{
+	*speed = PCI_SPEED_UNKNOWN;
+	*width = PCIE_LNK_WIDTH_UNKNOWN;
+	return (0);
 }
 
 static inline int
