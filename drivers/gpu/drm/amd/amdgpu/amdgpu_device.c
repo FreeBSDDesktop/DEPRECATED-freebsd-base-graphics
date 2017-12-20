@@ -3230,9 +3230,8 @@ static int amdgpu_debugfs_regs_init(struct amdgpu_device *adev)
 			}
 			return PTR_ERR(ent);
 		}
-
 		if (!i)
-			i_size_write(ent->d_inode, adev->rmmio_size);
+			i_size_write(ent->d_inode, adev->rmmio_size);		
 		adev->debugfs_regs[i] = ent;
 	}
 

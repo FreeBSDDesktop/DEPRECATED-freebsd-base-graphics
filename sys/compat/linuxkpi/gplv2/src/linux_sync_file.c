@@ -90,7 +90,6 @@ struct sync_file *sync_file_create(struct dma_fence *fence)
 
 	return sync_file;
 }
-EXPORT_SYMBOL(sync_file_create);
 
 /**
  * sync_file_fdget() - get a sync_file from an fd
@@ -137,7 +136,6 @@ struct dma_fence *sync_file_get_fence(int fd)
 
 	return fence;
 }
-EXPORT_SYMBOL(sync_file_get_fence);
 
 static int sync_file_set_fence(struct sync_file *sync_file,
 			       struct dma_fence **fences, int num_fences)

@@ -138,9 +138,6 @@ struct file_operations {
 	int (*release)(struct inode *, struct file *);
 	int (*fasync)(int, struct file *, int);
 
-	// Needed to build 4.10 by i915 driver but not used.
-	long (*compat_ioctl)(struct file *, unsigned int, unsigned long);
-
 /* Although not supported in FreeBSD, to align with Linux code
  * we are adding llseek() only when it is mapped to no_llseek which returns
  * an illegal seek error
@@ -280,10 +277,47 @@ no_llseek(struct file *file, loff_t offset, int whence)
 }
 
 static inline loff_t
-noop_llseek(struct linux_file *file, loff_t offset, int whence)
+noop_llseek(struct file *file, loff_t offset, int whence)
 {
 
 	return (file->_file->f_offset);
+}
+
+static inline struct inode *
+file_inode(const struct file *f)
+{
+	return f->f_inode;
+}
+
+static inline int
+call_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	return file->f_op->mmap(file, vma);
+}
+
+/*
+ * NOTE: unlike i_size_read(), i_size_write() does need locking around it
+ * (normally i_mutex), otherwise on 32bit/SMP an update of i_size_seqcount
+ * can be lost, resulting in subsequent i_size_read() calls spinning forever.
+ */
+static inline void
+i_size_write(void *inode, loff_t i_size)
+{
+	printf("%s: unimplemented!", __func__);
+	
+/* #if BITS_PER_LONG==32 && defined(CONFIG_SMP) */
+/* 	preempt_disable(); */
+/* 	write_seqcount_begin(&inode->i_size_seqcount); */
+/* 	inode->i_size = i_size; */
+/* 	write_seqcount_end(&inode->i_size_seqcount); */
+/* 	preempt_enable(); */
+/* #elif BITS_PER_LONG==32 && defined(CONFIG_PREEMPT) */
+/* 	preempt_disable(); */
+/* 	inode->i_size = i_size; */
+/* 	preempt_enable(); */
+/* #else */
+/* 	inode->i_size = i_size; */
+/* #endif */
 }
 
 /* Shared memory support */

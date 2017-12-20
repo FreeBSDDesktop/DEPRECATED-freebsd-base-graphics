@@ -59,6 +59,7 @@ drm_pci_busdma_callback(void *arg, bus_dma_segment_t *segs, int nsegs, int error
  */
 drm_dma_handle_t *drm_pci_alloc(struct drm_device * dev, size_t size, size_t align)
 {
+	printf("%s\n", __func__);
 #ifdef __FreeBSD__
 	drm_dma_handle_t *dmah;
 	int ret;
@@ -324,6 +325,8 @@ int drm_get_pci_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
 	if (IS_ERR(dev))
 		return PTR_ERR(dev);
 
+	printf("%s\n", __func__);
+
 	ret = pci_enable_device(pdev);
 	if (ret)
 		goto err_free;
@@ -374,6 +377,8 @@ EXPORT_SYMBOL(drm_get_pci_dev);
  */
 int drm_pci_init(struct drm_driver *driver, struct pci_driver *pdriver)
 {
+	printf("%s: entering", __func__);
+
 	struct pci_dev *pdev = NULL;
 	const struct pci_device_id *pid;
 	int i;
@@ -381,19 +386,18 @@ int drm_pci_init(struct drm_driver *driver, struct pci_driver *pdriver)
 	DRM_DEBUG("\n");
 
 #ifdef __FreeBSD__
+
 	pdriver->bsdclass = drm_devclass;
 	pdriver->name = "drmn";
-#endif
 
 	if (!(driver->driver_features & DRIVER_LEGACY))
-		return pci_register_driver(pdriver);
+		return linux_pci_register_drm_driver(pdriver);
 
-#ifdef __FreeBSD__
 	DRM_ERROR("FreeBSD needs DRIVER_MODESET");
 	return (-ENOTSUP);
-#endif
-	
-#ifndef __FreeBSD__
+
+#else
+
 	/* If not using KMS, fall back to stealth mode manual scanning. */
 	INIT_LIST_HEAD(&driver->legacy_dev_list);
 	for (i = 0; pdriver->id_table[i].vendor != 0; i++) {

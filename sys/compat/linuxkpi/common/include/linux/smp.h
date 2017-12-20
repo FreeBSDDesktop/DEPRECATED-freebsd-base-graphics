@@ -34,7 +34,6 @@
 #include <linux/list.h>
 #include <linux/preempt.h>
 #include <linux/kernel.h>
-#include <linux/llist.h>
 
 #define	on_each_cpu(cb, data, wait) ({				\
 	CTASSERT(wait);						\

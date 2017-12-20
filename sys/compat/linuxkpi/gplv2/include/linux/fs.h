@@ -4,6 +4,7 @@
 #include <linux/capability.h>
 #include <linux/mutex.h>
 #include <linux/shrinker.h>
+#include <linux/llist.h>
 
 #include_next <linux/fs.h>
 

@@ -33,9 +33,11 @@
 
 #include <linux/device.h>
 #include <linux/pci.h>
+#include <linux/irqreturn.h>
 
 #include <sys/bus.h>
 #include <sys/rman.h>
+
 
 typedef	irqreturn_t	(*irq_handler_t)(int, void *);
 
@@ -46,7 +48,7 @@ struct irq_ent {
 	struct device	*dev;
 	struct resource	*res;
 	void		*arg;
-	irq_handler_t handler;
+	irqreturn_t	(*handler)(int, void *);
 	void		*tag;
 	unsigned int	irq;
 };

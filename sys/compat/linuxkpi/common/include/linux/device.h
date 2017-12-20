@@ -58,7 +58,6 @@ struct class {
 	void		(*class_release)(struct class *class);
 	void		(*dev_release)(struct device *dev);
 	char *		(*devnode)(struct device *dev, umode_t *mode);
-	const struct dev_pm_ops *pm;
 };
 
 struct dev_pm_ops {
@@ -143,6 +142,11 @@ struct device_attribute {
 					struct device_attribute *, const char *,
 					size_t);
 };
+
+#define DEVICE_ATTR(_name, _mode, _show, _store) \
+	struct device_attribute dev_attr_##_name = __ATTR(_name, _mode, _show, _store)
+#define DEVICE_ATTR_RO(_name)									\
+	struct device_attribute dev_attr_##_name = __ATTR_RO(_name)
 
 /* Simple class attribute that is just a static string */
 struct class_attribute_string {

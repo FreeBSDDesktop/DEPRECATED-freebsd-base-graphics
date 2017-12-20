@@ -90,6 +90,7 @@ static int drm_open_helper(struct file *filp, struct drm_minor *minor);
 
 static int drm_setup(struct drm_device * dev)
 {
+	printf("entering %s\n", __func__);
 	int ret;
 
 	if (dev->driver->firstopen &&
@@ -123,6 +124,8 @@ static int drm_setup(struct drm_device * dev)
  */
 int drm_open(struct inode *inode, struct file *filp)
 {
+	printf("entering %s\n", __func__);
+
 	struct drm_device *dev;
 	struct drm_minor *minor;
 	int retcode;

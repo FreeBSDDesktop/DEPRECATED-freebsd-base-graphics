@@ -6,6 +6,7 @@
 #include <linux/slab.h>
 #include <linux/poll.h>
 #include <linux/fs.h>
+#include <linux/mm.h>
 #include <asm/uaccess.h>
 
 
@@ -303,7 +304,7 @@ extern size_t relay_switch_subbuf(struct rchan_buf *buf,
 
 	old = buf->data;
 	new_subbuf = buf->subbufs_produced % buf->chan->n_subbufs;
-	new = buf->start + new_subbuf * buf->chan->subbuf_size;
+	new = (char*)buf->start + new_subbuf * buf->chan->subbuf_size;
 	buf->offset = 0;
 	if (!buf->chan->cb->subbuf_start(buf, new, old, buf->prev_padding)) {
 		buf->offset = buf->chan->subbuf_size + 1;
@@ -433,7 +434,7 @@ static size_t relay_file_read_subbuf_avail(size_t read_pos,
 	size_t read_subbuf, read_offset, write_subbuf, write_offset;
 	size_t subbuf_size = buf->chan->subbuf_size;
 
-	write_subbuf = (buf->data - buf->start) / subbuf_size;
+	write_subbuf = ((char*)buf->data - (char*)buf->start) / subbuf_size;
 	write_offset = buf->offset > subbuf_size ? subbuf_size : buf->offset;
 	read_subbuf = read_pos / subbuf_size;
 	read_offset = read_pos % subbuf_size;
@@ -515,7 +516,7 @@ static ssize_t relay_file_read(struct file *filp,
 			break;
 
 		avail = min(count, avail);
-		from = buf->start + read_start;
+		from = (char*)buf->start + read_start;
 		ret = avail;
 		if (copy_to_user(buffer, from, avail))
 			break;

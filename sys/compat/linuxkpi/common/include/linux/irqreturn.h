@@ -1,5 +1,5 @@
-#ifndef _LINUX_IRQRETURN_H
-#define _LINUX_IRQRETURN_H
+#ifndef _LINUX_IRQRETURN_NEXT_H
+#define _LINUX_IRQRETURN_NEXT_H
 
 enum irqreturn {
 	IRQ_NONE		= (0 << 0),
@@ -9,5 +9,6 @@ enum irqreturn {
 
 typedef enum irqreturn irqreturn_t;
 #define IRQ_RETVAL(x)	((x) ? IRQ_HANDLED : IRQ_NONE)
+
 
 #endif

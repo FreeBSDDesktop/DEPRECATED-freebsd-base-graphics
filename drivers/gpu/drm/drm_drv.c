@@ -88,24 +88,30 @@ void drm_dev_printk(const struct device *dev, const char *level,
 	va_start(args, format);
 	vaf.fmt = format;
 	vaf.va = &args;
-
-#ifdef __linux__
+	
+#ifdef __FreeBSD__
+	printf("[" DRM_NAME ":%s] *ERROR* ", function_name);
+	vprintf(format, args);
+#else
 	if (dev)
 		dev_printk(level, dev, DRM_PRINTK_FMT, function_name, prefix,
 			   &vaf);
 	else
 		printk("%s" DRM_PRINTK_FMT, level, function_name, prefix, &vaf);
-#else
-	printf("[" DRM_NAME ":%ps] *ERROR* ", __builtin_return_address(0));
-	vprintf(format, args);
 #endif
-
+	
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_dev_printk);
 
+#ifdef __FreeBSD__
 void drm_printk(const char *level, unsigned int category,
-		const char *format, ...)
+				const char *function_name, const char *prefix,
+				const char *format, ...)
+#else
+void drm_printk(const char *level, unsigned int category,
+				const char *format, ...)
+#endif
 {
 	struct va_format vaf;
 	va_list args;
@@ -116,22 +122,23 @@ void drm_printk(const char *level, unsigned int category,
 	va_start(args, format);
 	vaf.fmt = format;
 	vaf.va = &args;
-#ifdef __linux__
-	printk("%s" "[" DRM_NAME ":%ps]%s %pV",
-	       level, __builtin_return_address(0),
-	       strcmp(level, KERN_ERR) == 0 ? " *ERROR*" : "", &vaf);
-#else
+	
+#ifdef __FreeBSD__
 	if (SCHEDULER_STOPPED() || kdb_active) {
 		printf(" ");
 		return;
 	}
 	if (panicstr != NULL)
 		return;
-	printf("%s" "[" DRM_NAME ":%ps]%s %pV",
+
+	printf("[" DRM_NAME ":%s] ", function_name);
+	vprintf(format, args);
+#else
+	printk("%s" "[" DRM_NAME ":%ps]%s %pV",
 	       level, __builtin_return_address(0),
 	       strcmp(level, KERN_ERR) == 0 ? " *ERROR*" : "", &vaf);
-	vprintf(format, args);
 #endif
+	
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_printk);
@@ -504,6 +511,7 @@ int drm_dev_init(struct drm_device *dev,
 		 struct drm_driver *driver,
 		 struct device *parent)
 {
+	printf("%s: entering\n", __func__);
 	int ret;
 
 	kref_init(&dev->ref);
@@ -802,6 +810,7 @@ static void remove_compat_control_link(struct drm_device *dev)
  */
 int drm_dev_register(struct drm_device *dev, unsigned long flags)
 {
+	DRM_DEBUG("%s: entering\n", __func__);
 	struct drm_driver *driver = dev->driver;
 	int ret;
 
@@ -974,7 +983,8 @@ static const struct file_operations drm_stub_fops = {
 };
 
 static void drm_core_exit(void)
-{
+{	
+	printf("%s: entering\n", __func__);
 	unregister_chrdev(DRM_MAJOR, "drm");
 	debugfs_remove(drm_debugfs_root);
 	drm_sysfs_destroy();
@@ -985,6 +995,7 @@ static void drm_core_exit(void)
 
 static int __init drm_core_init(void)
 {
+	printf("%s: entering\n", __func__);
 	int ret;
 
 	drm_global_init();
@@ -1008,10 +1019,13 @@ static int __init drm_core_init(void)
 	if (ret < 0)
 		goto error;
 
-	DRM_DEBUG("Initialized\n");
+	/* DRM_DEBUG("Initialized\n"); */
+
+	printf("%s: initialized\n", __func__);
 	return 0;
 
 error:
+	printf("%s: error\n", __func__);
 	drm_core_exit();
 	return ret;
 }

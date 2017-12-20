@@ -4,6 +4,7 @@
 
 #include <linux/types.h>
 #include <linux/fs.h>
+#include <linux/kref.h>
 
 
 
@@ -97,7 +98,7 @@ static inline void __relay_write(struct rchan *chan,
 	buf = chan->buf[0];
 	if (unlikely(buf->offset + length > chan->subbuf_size))
 		length = relay_switch_subbuf(buf, length);
-	memcpy(buf->data + buf->offset, data, length);
+	memcpy((char*)buf->data + buf->offset, data, length);
 	buf->offset += length;
 }
 
@@ -116,7 +117,7 @@ static inline void *relay_reserve(struct rchan *chan, size_t length) {
 		if (!length)
 			goto end;
 	}
-	reserved = buf->data + buf->offset;
+	reserved = (char*)buf->data + buf->offset;
 	buf->offset += length;
 
 end:

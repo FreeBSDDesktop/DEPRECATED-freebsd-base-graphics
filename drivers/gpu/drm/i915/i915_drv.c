@@ -1193,6 +1193,8 @@ static void i915_driver_cleanup_hw(struct drm_i915_private *dev_priv)
  */
 static void i915_driver_register(struct drm_i915_private *dev_priv)
 {
+	printf("entering %s\n", __func__);
+
 	struct drm_device *dev = &dev_priv->drm;
 
 	i915_gem_shrinker_init(dev_priv);
@@ -1278,6 +1280,7 @@ static void i915_driver_unregister(struct drm_i915_private *dev_priv)
  */
 int i915_driver_load(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
+	printf("entering %s\n", __func__);
 	struct drm_i915_private *dev_priv;
 	int ret;
 
@@ -1432,6 +1435,7 @@ void i915_driver_unload(struct drm_device *dev)
 
 static int i915_driver_open(struct drm_device *dev, struct drm_file *file)
 {
+	printf("entering %s\n", __func__);
 	int ret;
 
 	ret = i915_gem_open(dev, file);
