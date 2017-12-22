@@ -278,6 +278,8 @@ static int guc_ucode_xfer_dma(struct drm_i915_private *dev_priv,
 	u32 status, rsa[UOS_RSA_SCRATCH_MAX_COUNT];
 	int i, ret = 0;
 
+	printf("%s: entering\n", __func__);
+	
 	/* where RSA signature starts */
 	offset = guc_fw->rsa_offset;
 
@@ -293,7 +295,6 @@ static int guc_ucode_xfer_dma(struct drm_i915_private *dev_priv,
 
 	for (i = 0; i < UOS_RSA_SCRATCH_MAX_COUNT; i++) {
 		I915_WRITE(UOS_RSA_SCRATCH(i), rsa[i]);
-		/* printf("%s: copy u32 index %d to address %p value %d\n", __func__, i, UOS_RSA_SCRATCH(i), rsa[i]); */
 	}
 	/* The header plus uCode will be copied to WOPCM via DMA, excluding any
 	 * other components */
@@ -357,6 +358,8 @@ static int guc_ucode_xfer(struct drm_i915_private *dev_priv)
 	struct i915_vma *vma;
 	int ret;
 
+	printf("%s: entering\n", __func__);
+	
 	ret = i915_gem_object_set_to_gtt_domain(guc_fw->obj, false);
 	if (ret) {
 		DRM_DEBUG_DRIVER("set-domain failed %d\n", ret);
@@ -455,6 +458,8 @@ int intel_guc_setup(struct drm_i915_private *dev_priv)
 	const char *fw_path = guc_fw->path;
 	int retries, ret, err;
 
+	printf("%s: entering\n", __func__);
+	
 	DRM_DEBUG_DRIVER("GuC fw status: path %s, fetch %s, load %s\n",
 		fw_path,
 		intel_uc_fw_status_repr(guc_fw->fetch_status),
@@ -523,7 +528,7 @@ int intel_guc_setup(struct drm_i915_private *dev_priv)
 		if (--retries == 0)
 			goto fail;
 
-		DRM_INFO("GuC fw load failed: %d; will reset and "
+		DRM_INFO("GuC fw load failed: %d; will reseup and "
 			 "retry %d more time(s)\n", err, retries);
 	}
 
@@ -744,6 +749,7 @@ fail:
  */
 void intel_guc_init(struct drm_i915_private *dev_priv)
 {
+	printf("%s: entering\n", __func__);
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 	const char *fw_path;
 
@@ -800,6 +806,8 @@ void intel_guc_init(struct drm_i915_private *dev_priv)
  */
 void intel_guc_fini(struct drm_i915_private *dev_priv)
 {
+	printf("%s: entering\n", __func__);
+	
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 
 	mutex_lock(&dev_priv->drm.struct_mutex);

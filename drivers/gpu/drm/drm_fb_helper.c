@@ -1588,13 +1588,6 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	if (ret < 0)
 		return ret;
 
-#ifdef __FreeBSD__ // XXX: This is removed from Linux code. We still need it?
-	struct fb_info *info;
-	info = fb_helper->fbdev;
-	info->fbio.fb_video_dev = device_get_parent(fb_helper->dev->dev->bsddev);
-	info->fbio.fb_bpp = preferred_bpp;
-	info->fb_bsddev = fb_helper->dev->dev->bsddev;
-#endif
 	/*
 	 * Set the fb pointer - usually drm_setup_crtcs does this for hotplug
 	 * events, but at init time drm_setup_crtcs needs to be called before
@@ -2278,6 +2271,16 @@ int drm_fb_helper_initial_config(struct drm_fb_helper *fb_helper, int bpp_sel)
 
 	info = fb_helper->fbdev;
 	info->var.pixclock = 0;
+
+#ifdef __FreeBSD__
+	info->fbio.fb_video_dev = device_get_parent(fb_helper->dev->dev->bsddev);
+	info->fbio.fb_bpp = bpp_sel;
+	info->fb_bsddev = fb_helper->dev->dev->bsddev;
+	struct vt_kms_softc *sc = (struct vt_kms_softc *)info->fbio.fb_priv;
+	if(sc)
+		sc->fb_helper = fb_helper;
+#endif
+
 	ret = register_framebuffer(info);
 	if (ret < 0)
 		return ret;
