@@ -283,9 +283,18 @@ static int guc_ucode_xfer_dma(struct drm_i915_private *dev_priv,
 
 	/* Copy RSA signature from the fw image to HW for verification */
 	sg_pcopy_to_buffer(sg->sgl, sg->nents, rsa, sizeof(rsa), offset);
-	for (i = 0; i < UOS_RSA_SCRATCH_MAX_COUNT; i++)
-		I915_WRITE(UOS_RSA_SCRATCH(i), rsa[i]);
 
+	printf("%s: rsa data from firmware file at offset %lu\n", __func__, offset);
+	u8 *b = (u8 *)rsa;
+	for (i = 0; i < UOS_RSA_SCRATCH_MAX_COUNT*4; i++) {
+		printf("%02X", b[i]);
+	}
+	printf("\n");
+
+	for (i = 0; i < UOS_RSA_SCRATCH_MAX_COUNT; i++) {
+		I915_WRITE(UOS_RSA_SCRATCH(i), rsa[i]);
+		/* printf("%s: copy u32 index %d to address %p value %d\n", __func__, i, UOS_RSA_SCRATCH(i), rsa[i]); */
+	}
 	/* The header plus uCode will be copied to WOPCM via DMA, excluding any
 	 * other components */
 	I915_WRITE(DMA_COPY_SIZE, guc_fw->header_size + guc_fw->ucode_size);

@@ -1,7 +1,8 @@
 # $FreeBSD$
 
-SUBDIR=									\
-	sklguc		\
+SUBDIR= \
+	sklguc \
+	sklhuc \
 	skldmc
 
 .include <bsd.subdir.mk>

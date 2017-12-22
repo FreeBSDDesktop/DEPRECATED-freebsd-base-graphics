@@ -358,8 +358,11 @@ _sg_iter_next(struct sg_page_iter *iter)
 		iter->sg_pgoffset -= pgcount;
 		sg = sg_next(sg);
 		--iter->maxents;
-		if (sg == NULL || iter->maxents == 0)
+		if (sg == NULL || iter->maxents == 0) {
+			// XXX: sg not null even we reach max ents. why?
+			sg = NULL;
 			break;
+		}
 		pgcount = (sg->offset + sg->length + PAGE_SIZE - 1) >> PAGE_SHIFT;
 	}
 	iter->sg = sg;

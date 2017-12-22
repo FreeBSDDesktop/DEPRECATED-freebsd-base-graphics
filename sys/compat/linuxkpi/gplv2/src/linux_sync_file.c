@@ -30,15 +30,17 @@ static const struct file_operations sync_file_fops;
 
 static struct sync_file *sync_file_alloc(void)
 {
+	printf("%s:\n", __func__);
+
 	struct sync_file *sync_file;
 
 	sync_file = kzalloc(sizeof(*sync_file), GFP_KERNEL);
 	if (!sync_file)
 		return NULL;
 
-	#pragma GCC warning "anon_inode_getfile() need proper impl!"
-	sync_file->file = anon_inode_getfile("/tmp/drm_sync_file", &sync_file_fops,
-										 sync_file, 0);
+	#pragma GCC warning "anon_inode need proper impl and sync_file need testing for 4.12!"
+	sync_file->file = anon_inode_getfile("/dev/linuxkpi_sync_file",
+										 &sync_file_fops, sync_file, 0);
 	if (IS_ERR(sync_file->file))
 		goto err;
 
@@ -74,6 +76,7 @@ static void fence_check_cb_func(struct dma_fence *f, struct dma_fence_cb *cb)
  */
 struct sync_file *sync_file_create(struct dma_fence *fence)
 {
+	printf("%s:\n", __func__);
 	struct sync_file *sync_file;
 
 	sync_file = sync_file_alloc();
@@ -448,6 +451,8 @@ out:
 static long sync_file_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg)
 {
+	printf("%s: called with command %d\n", __func__, cmd);
+	
 	struct sync_file *sync_file = file->private_data;
 
 	switch (cmd) {

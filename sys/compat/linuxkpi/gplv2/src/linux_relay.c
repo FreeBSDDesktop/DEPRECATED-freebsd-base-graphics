@@ -113,6 +113,9 @@ struct rchan *relay_open(const char *base_filename,
 						 size_t n_subbufs,
 						 struct rchan_callbacks *cb,
 						 void *private_data) {
+
+	printf("%s\n", __func__);
+	
 	struct rchan *chan;
 	struct rchan_buf *buf;
 	struct rchan_buf **bufs;
@@ -180,6 +183,9 @@ extern int relay_late_setup_files(struct rchan *chan,
 }
 
 extern void relay_close(struct rchan *chan) {
+
+	printf("%s\n", __func__);
+	
 	if(!chan)
 		return;
 	struct rchan_buf *buf = chan->buf[0];
@@ -328,12 +334,29 @@ toobig:
 
 
 static int relay_file_open(struct inode *inode, struct file *filp) {
+
+	printf("%s\n", __func__);
+	
 	struct rchan_buf *buf = inode->i_private;
 	kref_get(&buf->kref);
 	filp->private_data = buf;
 
 	return nonseekable_open(inode, filp);
 }
+
+/* /\** */
+/*  *	relay_file_mmap - mmap file op for relay files */
+/*  *	@filp: the file */
+/*  *	@vma: the vma describing what to map */
+/*  * */
+/*  *	Calls upon relay_mmap_buf() to map the file into user space. */
+/*  *\/ */
+/* static int relay_file_mmap(struct file *filp, struct vm_area_struct *vma) */
+/* { */
+/* 	struct rchan_buf *buf = filp->private_data; */
+/* 	return relay_mmap_buf(buf, vma); */
+/* } */
+
 
 static unsigned int relay_file_poll(struct file *filp, poll_table *wait) {
 	unsigned int mask = 0;
@@ -352,10 +375,12 @@ static unsigned int relay_file_poll(struct file *filp, poll_table *wait) {
 }
 
 static int relay_file_release(struct inode *inode, struct file *filp) {
+
+	printf("%s\n", __func__);
+	
+	// relay_close() will clean up everything
 	/* struct rchan_buf *buf = filp->private_data; */
 	/* kref_put(&buf->kref, relay_remove_buf); */
-
-	// relay_close() will clean up everything
 
 	return 0;
 }
@@ -493,6 +518,9 @@ static ssize_t relay_file_read(struct file *filp,
 							   char __user *buffer,
 							   size_t count,
 							   loff_t *ppos) {
+
+	printf("%s\n", __func__);
+	
 	struct rchan_buf *buf = filp->private_data;
 	size_t read_start, avail;
 	size_t written = 0;

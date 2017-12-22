@@ -18,6 +18,8 @@ anon_inode_getfile(const char *name,
 				   const struct file_operations *fops,
 				   void *priv, int flags) {
 
+	printf("%s: creating anon_inode name = %s\n", __func__, name);
+
 	struct thread *td = curthread;
 	struct nameidata nd;
 	struct linux_file *fp;
@@ -60,6 +62,7 @@ anon_inode_getfile(const char *name,
 int
 anon_inode_getfd(const char *name, const struct file_operations *fops,
 				 void *priv, int flags) {
+	printf("%s:\n", __func__);
 	int error, fd;
 	struct linux_file *file;
 
