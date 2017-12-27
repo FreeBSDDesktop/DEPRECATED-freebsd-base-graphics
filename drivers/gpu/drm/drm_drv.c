@@ -511,7 +511,6 @@ int drm_dev_init(struct drm_device *dev,
 		 struct drm_driver *driver,
 		 struct device *parent)
 {
-	printf("%s: entering\n", __func__);
 	int ret;
 
 	kref_init(&dev->ref);
@@ -984,7 +983,6 @@ static const struct file_operations drm_stub_fops = {
 
 static void drm_core_exit(void)
 {	
-	printf("%s: entering\n", __func__);
 	unregister_chrdev(DRM_MAJOR, "drm");
 	debugfs_remove(drm_debugfs_root);
 	drm_sysfs_destroy();
@@ -995,7 +993,6 @@ static void drm_core_exit(void)
 
 static int __init drm_core_init(void)
 {
-	printf("%s: entering\n", __func__);
 	int ret;
 
 	drm_global_init();
@@ -1021,11 +1018,9 @@ static int __init drm_core_init(void)
 
 	/* DRM_DEBUG("Initialized\n"); */
 
-	printf("%s: initialized\n", __func__);
 	return 0;
 
 error:
-	printf("%s: error\n", __func__);
 	drm_core_exit();
 	return ret;
 }

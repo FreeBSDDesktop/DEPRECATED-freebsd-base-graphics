@@ -78,8 +78,6 @@ static device_method_t pci_methods[] = {
 static struct pci_driver *
 linux_pci_find(device_t dev, const struct pci_device_id **idp)
 {	
-	device_printf(dev, "%s\n", __func__);
-
 	const struct pci_device_id *id;
 	struct pci_driver *pdrv;
 	uint16_t vendor;
@@ -88,15 +86,12 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 	vendor = pci_get_vendor(dev);
 	device = pci_get_device(dev);
 
-	device_printf(dev, "%s: vendor %x, device %x.\n", __func__, vendor, device);
-
 	spin_lock(&pci_lock);
 	list_for_each_entry(pdrv, &pci_drivers, links) {
 		for (id = pdrv->id_table; id->vendor != 0; id++) {
 			if (vendor == id->vendor && device == id->device) {
 				*idp = id;
 				spin_unlock(&pci_lock);	
-				device_printf(dev, "%s: got matching device\n", __func__);
 				return (pdrv);
 			}
 		}
@@ -108,8 +103,6 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 static int
 linux_pci_probe(device_t dev)
 {	
-	device_printf(dev, "%s\n", __func__);
-
 	const struct pci_device_id *id;
 	struct pci_driver *pdrv;
 
@@ -124,7 +117,6 @@ linux_pci_probe(device_t dev)
 static int
 linux_pci_attach(device_t dev)
 {
-	device_printf(dev, "%s\n", __func__);
 	struct resource_list_entry *rle;
 	struct pci_bus *pbus;
 	struct pci_dev *pdev;
@@ -277,7 +269,6 @@ linux_pci_shutdown(device_t dev)
 static int
 _linux_pci_register_driver(struct pci_driver *pdrv, devclass_t dc)
 {
-	printf("%s: entering. driver=%s\n", __func__, pdrv->name);
 	int error;
 
 	linux_set_current(curthread);
@@ -288,14 +279,10 @@ _linux_pci_register_driver(struct pci_driver *pdrv, devclass_t dc)
 	pdrv->bsddriver.methods = pci_methods;
 	pdrv->bsddriver.size = sizeof(struct pci_dev);
 
-	printf("%s: dc=%p. dc->name=%s.\n", __func__, dc, devclass_get_name(dc));
-	
 	mtx_lock(&Giant);
 	error = devclass_add_driver(dc, &pdrv->bsddriver,
 								BUS_PASS_DEFAULT, &pdrv->bsdclass);
 	mtx_unlock(&Giant);
-
-	printf("%s: leaving. driver=%s. error=%d\n", __func__, pdrv->name, error);
 
 	return (-error);
 }
@@ -303,7 +290,6 @@ _linux_pci_register_driver(struct pci_driver *pdrv, devclass_t dc)
 int
 linux_pci_register_driver(struct pci_driver *pdrv)
 {
-	printf("%s: driver %s\n", __func__, pdrv->name);
 	devclass_t dc;
 
 	dc = devclass_find("pci");
@@ -316,7 +302,6 @@ linux_pci_register_driver(struct pci_driver *pdrv)
 int
 linux_pci_register_drm_driver(struct pci_driver *pdrv)
 {
-	printf("%s: driver %s\n", __func__, pdrv->name);
 	devclass_t dc;
 
 	dc = devclass_create("vgapci");
@@ -330,7 +315,6 @@ linux_pci_register_drm_driver(struct pci_driver *pdrv)
 void
 linux_pci_unregister_driver(struct pci_driver *pdrv)
 {
-	printf("%s: driver %s\n", __func__, pdrv->name);
 	devclass_t bus;
 
 	bus = devclass_find("pci");

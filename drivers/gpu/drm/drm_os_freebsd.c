@@ -312,8 +312,6 @@ out:
 static int
 drm_modevent(module_t mod, int type, void *data)
 {
-	printf("entering %s\n", __func__);
-
 	switch (type) {
 	case MOD_LOAD:
 		TUNABLE_INT_FETCH("drm.debug", &drm_debug);

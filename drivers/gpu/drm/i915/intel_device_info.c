@@ -67,13 +67,13 @@ void intel_device_info_dump(struct drm_i915_private *dev_priv)
 {
 	const struct intel_device_info *info = &dev_priv->info;
 
-	DRM_DEBUG_DRIVER("i915 device info: platform=%s gen=%i pciid=0x%04x rev=0x%02x",
+	DRM_DEBUG_DRIVER("i915 device info: platform=%s gen=%i pciid=0x%04x rev=0x%02x\n",
 			 intel_platform_name(info->platform),
 			 info->gen,
 			 dev_priv->drm.pdev->device,
 			 dev_priv->drm.pdev->revision);
 #define PRINT_FLAG(name) \
-	DRM_DEBUG_DRIVER("i915 device info: " #name ": %s", yesno(info->name))
+	DRM_DEBUG_DRIVER("i915 device info: " #name ": %s\n", yesno(info->name))
 	DEV_INFO_FOR_EACH_FLAG(PRINT_FLAG);
 #undef PRINT_FLAG
 }

@@ -641,7 +641,6 @@ i915_gem_create(struct drm_file *file,
 		uint64_t size,
 		uint32_t *handle_p)
 {
-	DRM_DEBUG("entering %s\n", __func__);
 	struct drm_i915_gem_object *obj;
 	int ret;
 	u32 handle;
@@ -4698,7 +4697,6 @@ bool intel_sanitize_semaphores(struct drm_i915_private *dev_priv, int value)
 
 int i915_gem_init(struct drm_i915_private *dev_priv)
 {
-	DRM_DEBUG("entering %s\n", __func__);
 	int ret;
 
 	mutex_lock(&dev_priv->drm.struct_mutex);
@@ -4796,7 +4794,6 @@ i915_gem_load_init_fences(struct drm_i915_private *dev_priv)
 int
 i915_gem_load_init(struct drm_i915_private *dev_priv)
 {
-	DRM_DEBUG("entering %s\n", __func__);
 	int err = -ENOMEM;
 
 	dev_priv->objects = KMEM_CACHE(drm_i915_gem_object, SLAB_HWCACHE_ALIGN);
@@ -4954,7 +4951,6 @@ void i915_gem_release(struct drm_device *dev, struct drm_file *file)
 
 int i915_gem_open(struct drm_device *dev, struct drm_file *file)
 {
-	DRM_DEBUG("entering %s\n", __func__);
 	struct drm_i915_file_private *file_priv;
 	int ret;
 
