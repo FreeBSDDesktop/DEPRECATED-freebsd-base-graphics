@@ -77,7 +77,7 @@ static device_method_t pci_methods[] = {
 
 static struct pci_driver *
 linux_pci_find(device_t dev, const struct pci_device_id **idp)
-{
+{	
 	const struct pci_device_id *id;
 	struct pci_driver *pdrv;
 	uint16_t vendor;
@@ -91,7 +91,7 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 		for (id = pdrv->id_table; id->vendor != 0; id++) {
 			if (vendor == id->vendor && device == id->device) {
 				*idp = id;
-				spin_unlock(&pci_lock);
+				spin_unlock(&pci_lock);	
 				return (pdrv);
 			}
 		}
@@ -102,7 +102,7 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 
 static int
 linux_pci_probe(device_t dev)
-{
+{	
 	const struct pci_device_id *id;
 	struct pci_driver *pdrv;
 
@@ -281,8 +281,9 @@ _linux_pci_register_driver(struct pci_driver *pdrv, devclass_t dc)
 
 	mtx_lock(&Giant);
 	error = devclass_add_driver(dc, &pdrv->bsddriver,
-	    BUS_PASS_DEFAULT, &pdrv->bsdclass);
+								BUS_PASS_DEFAULT, &pdrv->bsdclass);
 	mtx_unlock(&Giant);
+
 	return (-error);
 }
 

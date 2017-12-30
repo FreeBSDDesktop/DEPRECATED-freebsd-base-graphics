@@ -18,17 +18,20 @@ SRCS	= \
 	i915_gem_dmabuf.c \
 	i915_gem_evict.c \
 	i915_gem_execbuffer.c \
-	i915_gem_fence.c \
+	i915_gem_fence_reg.c \
 	i915_gem_gtt.c \
+	i915_gem_internal.c \
 	i915_gem_render_state.c \
 	i915_gem_request.c \
 	i915_gem_stolen.c \
 	i915_gem_shrinker.c \
 	i915_gem_tiling.c \
+	i915_gem_timeline.c \
 	i915_gem_userptr.c \
 	i915_gpu_error.c \
 	i915_guc_submission.c \
 	i915_memcpy.c \
+	i915_oa_hsw.c \
 	i915_params.c \
 	i915_pci.c \
 	i915_irq.c \
@@ -36,6 +39,7 @@ SRCS	= \
 	i915_sw_fence.c \
 	i915_trace_points.c \
 	i915_vgpu.c \
+	i915_vma.c \
 	intel_acpi.c \
 	intel_atomic.c \
 	intel_atomic_plane.c \
@@ -66,16 +70,21 @@ SRCS	= \
 	intel_freebsd.c \
 	intel_frontbuffer.c \
 	intel_guc_loader.c \
+	intel_guc_log.c \
+	intel_hangcheck.c \
 	intel_hdmi.c \
 	intel_hotplug.c \
+	intel_huc.c \
 	intel_i2c.c \
 	intel_lrc.c \
+	intel_lspcon.c \
 	intel_lvds.c \
 	intel_modes.c \
 	intel_mocs.c \
 	intel_opregion.c \
 	intel_overlay.c \
 	intel_panel.c \
+	intel_pipe_crc.c \
 	intel_pm.c \
 	intel_psr.c \
 	intel_renderstate_gen6.c \
@@ -88,12 +97,39 @@ SRCS	= \
 	intel_sideband.c \
 	intel_sprite.c \
 	intel_tv.c \
+	intel_uc.c \
 	intel_uncore.c
+
+# i915_perf.c \ Can of worms. Don't use yet if possible.
+#	intel_lpe_audio.c \
+
+# GVT_DIR	= gvt
+# SRCS	+= ${GVT_DIR}/aperture_gm.c
+# SRCS	+= ${GVT_DIR}/cfg_space.c
+# SRCS	+= ${GVT_DIR}/cmd_parser.c
+# SRCS	+= ${GVT_DIR}/display.c
+# SRCS	+= ${GVT_DIR}/edid.c
+# SRCS	+= ${GVT_DIR}/execlist.c
+# SRCS	+= ${GVT_DIR}/firmware.c
+# SRCS	+= ${GVT_DIR}/gtt.c
+# SRCS	+= ${GVT_DIR}/gvt.c
+# SRCS	+= ${GVT_DIR}/handlers.c
+# SRCS	+= ${GVT_DIR}/interrupt.c
+# SRCS	+= ${GVT_DIR}/mmio.c
+# SRCS	+= ${GVT_DIR}/opregion.c
+# SRCS	+= ${GVT_DIR}/render.c
+# SRCS	+= ${GVT_DIR}/sched_policy.c
+# SRCS	+= ${GVT_DIR}/scheduler.c
+# SRCS	+= ${GVT_DIR}/trace_points.c
+# SRCS	+= ${GVT_DIR}/vgpu.c
+# CFLAGS+= -I${SRCTOP}/sys/dev/drm/i915
+
 
 CLEANFILES+= ${KMOD}.ko.full ${KMOD}.ko.debug
 
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/dummy/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/gplv2/include
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/gplv2/include/uapi
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include/uapi
 CFLAGS+= '-DKBUILD_MODNAME="${KMOD}"'
@@ -105,9 +141,9 @@ SRCS	+= i915_ioc32.c
 
 SRCS	+=								\
 	opt_acpi.h							\
-	opt_compat.h							\
+	opt_compat.h						\
 	opt_drm.h							\
-	opt_syscons.h							\
+	opt_syscons.h						\
 	acpi_if.h							\
 	bus_if.h							\
 	fb_if.h								\
@@ -116,32 +152,37 @@ SRCS	+=								\
 	vnode_if.h
 
 .include <bsd.kmod.mk>
-CWARNFLAGS += -Wno-pointer-arith -Wno-format
+CWARNFLAGS += -Wno-pointer-arith -Wno-format -Wno-cast-qual
 
 CWARNFLAGS.intel_audio.c=	-Wno-cast-qual
 CWARNFLAGS.intel_bios.c=	-Wno-cast-qual
 CWARNFLAGS.intel_csr.c=		-Wno-cast-qual
 CWARNFLAGS.intel_dp.c=		-Wno-enum-conversion -Wno-format -Wno-unused
-CWARNFLAGS.intel_ddi.c=		-Wno-compare-distinct-pointer-types		
+CWARNFLAGS.intel_ddi.c=		-Wno-compare-distinct-pointer-types
 CWARNFLAGS.intel_display.c=	-Wno-tautological-pointer-compare -Wno-enum-conversion -Wno-cast-qual -Wno-incompatible-pointer-types-discards-qualifiers
 CWARNFLAGS.intel_dpll_mgr.c=	-Wno-compare-distinct-pointer-types
 CWARNFLAGS.intel_dsi_panel_vbt.c= -Wno-cast-qual
 CWARNFLAGS.intel_engine_cs.c= -Wno-cast-qual
+CWARNFLAGS.intel_fbdev.c= 	-Wno-initializer-overrides
 CWARNFLAGS.intel_guc_loader.c= 	-Wno-cast-qual
 CWARNFLAGS.intel_hdmi.c=	-Wno-enum-conversion
 CWARNFLAGS.intel_hotplug.c=	-Wno-missing-prototypes
 CWARNFLAGS.intel_lrc.c=		-Wno-cast-qual
 CWARNFLAGS.intel_lvds.c=	-Wno-unused
 CWARNFLAGS.intel_overlay.c=	-Wno-tautological-pointer-compare
-CWARNFLAGS.intel_pm.c=		-Wno-cast-qual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unused-const-variable
+CWARNFLAGS.intel_pm.c=		-Wno-cast-qual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unused-const-variable -Wno-missing-prototypes
 CWARNFLAGS.intel_psr.c=		-Wno-cast-qual
-CWARNFLAGS.intel_runtime_pm.c=		-Wno-cast-qual 
+CWARNFLAGS.intel_runtime_pm.c=		-Wno-cast-qual
 CWARNFLAGS.intel_sdvo.c=	-Wno-cast-qual -Wno-enum-conversion
 CWARNFLAGS.intel_tv.c=		-Wno-unused
+CWARNFLAGS.intel_uncore.c=	-Wno-cast-qual
 CWARNFLAGS.i915_debugfs.c=	-Wno-unused-function -Wno-cast-qual -Wno-format -Wno-dangling-else
 CWARNFLAGS.i915_gem.c=		-Wno-tautological-pointer-compare -Wno-pointer-arith -Wno-cast-qual -Wno-int-conversion
 CWARNFLAGS.i915_drv.c=		-Wno-initializer-overrides -Wno-cast-qual -Wno-missing-prototypes
 CWARNFLAGS.i915_gem_gtt.c=	-Wno-tautological-pointer-compare
+CWARNFLAGS.i915_gem_stolen.c=	-Wno-unused-variable
 CWARNFLAGS.i915_gem_tiling.c=	-Wno-tautological-pointer-compare
 CWARNFLAGS.i915_gem_execbuffer.c=	-Wno-tautological-pointer-compare  -Wno-pointer-arith
-CWARNFLAGS.i915_pci.c=		-Wno-initializer-overrides 
+CWARNFLAGS.i915_pci.c=		-Wno-initializer-overrides
+
+#CWARNFLAGS.i915_gpu_error.c=-Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-missing-prototypes

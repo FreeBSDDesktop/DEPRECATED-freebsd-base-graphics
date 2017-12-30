@@ -89,6 +89,7 @@
 #define	BUILD_BUG_ON(x)			CTASSERT(!(x))
 #define	BUILD_BUG_ON_MSG(x, msg)	BUILD_BUG_ON(x)
 #define	BUILD_BUG_ON_NOT_POWER_OF_2(x)	BUILD_BUG_ON(!powerof2(x))
+#define BUILD_BUG_ON_INVALID(expr) ((void)(sizeof((__force long)(expr))))
 
 #define	BUG()			panic("BUG at %s:%d", __FILE__, __LINE__)
 #define	BUG_ON(cond)		do {				\
@@ -257,7 +258,7 @@ scnprintf(char *buf, size_t size, const char *fmt, ...)
 	const __typeof(((type *)0)->member) *__p = (ptr);	\
 	(type *)((uintptr_t)__p - offsetof(type, member));	\
 })
-  
+
 #define	ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
 #define	u64_to_user_ptr(val)	((void *)(uintptr_t)(val))
@@ -428,6 +429,10 @@ abs64(int64_t x)
 {
 	return (x < 0 ? -x : x);
 }
+
+/* XXX move us */
+#define rdmsrl(msr, val)			\
+	((val) = rdmsr((msr)))
 
 typedef struct linux_ratelimit {
 	struct timeval lasttime;

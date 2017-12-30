@@ -18,12 +18,14 @@ SRCS	= \
 	drm_crtc.c \
 	drm_crtc_helper.c \
 	drm_debugfs.c \
+	drm_debugfs_crc.c \
 	drm_dma.c \
 	drm_dp_aux_dev.c \
 	drm_dp_dual_mode_helper.c \
 	drm_dp_helper.c \
 	drm_dp_mst_topology.c \
 	drm_drv.c \
+	drm_dumb_buffers.c \
 	drm_edid.c \
 	drm_edid_load.c \
 	drm_encoder.c \
@@ -46,6 +48,7 @@ SRCS	= \
 	drm_memory.c \
 	drm_mipi_dsi.c \
 	drm_mm.c \
+	drm_mode_config.c \
 	drm_modes.c \
 	drm_mode_object.c \
 	drm_modeset_lock.c \
@@ -55,6 +58,7 @@ SRCS	= \
 	drm_pci.c \
 	drm_plane.c \
 	drm_plane_helper.c \
+	drm_print.c \
 	drm_prime.c \
 	drm_probe_helper.c \
 	drm_property.c \
@@ -108,9 +112,10 @@ CWARNFLAGS+=-Wno-cast-qual
 CWARNFLAGS+= -Wno-pointer-arith -Wno-pointer-sign -Wno-format
 CWARNFLAGS+= -Wno-expansion-to-defined
 
-CWARNFLAGS.drm_mipi_dsi.c+=	-Wno-incompatible-pointer-types-discards-qualifiers -Wno-int-conversion
+CWARNFLAGS.drm_atomic.c+=	-Wno-int-conversion 
 CWARNFLAGS.drm_cache.c+=	-Wno-int-conversion
-CWARNFLAGS.drm_info.c+=		-Wno-tautological-compare
 CWARNFLAGS.drm_debugfs.c+=	-Wno-format-security
+CWARNFLAGS.drm_info.c+=		-Wno-tautological-compare
+CWARNFLAGS.drm_mipi_dsi.c+=	-Wno-incompatible-pointer-types-discards-qualifiers -Wno-int-conversion
 CWARNFLAGS.drm_scatter.c+=	-Wno-int-conversion
 .include <bsd.kmod.mk>

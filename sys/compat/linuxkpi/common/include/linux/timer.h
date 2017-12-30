@@ -41,41 +41,40 @@ struct timer_list {
 	struct callout timer_callout;
 	void    (*function) (unsigned long);
 	unsigned long data;
-	int expires;
+	unsigned long expires;
 };
 
 extern unsigned long linux_timer_hz_mask;
 
-#define	TIMER_IRQSAFE	0x0001
-
-#define	setup_timer(timer, func, dat) do {				\
-	(timer)->function = (func);					\
+#define	setup_timer(timer, func, dat)					\
+do {									\
+	(timer)->function = (typeof((timer)->function))(func);		\
 	(timer)->data = (dat);						\
 	callout_init(&(timer)->timer_callout, 1);			\
 } while (0)
 
-#define	__setup_timer(timer, func, dat, flags) do {			\
-	CTASSERT(((flags) & ~TIMER_IRQSAFE) == 0);			\
-	setup_timer(timer, func, dat);					\
-} while (0)
+#define __setup_timer(timer, func, dat, flags) setup_timer(timer, func, dat)
 
-#define	init_timer(timer) do {						\
+#define	init_timer(timer)						\
+do {									\
 	(timer)->function = NULL;					\
 	(timer)->data = 0;						\
 	callout_init(&(timer)->timer_callout, 1);			\
 } while (0)
 
-extern void mod_timer(struct timer_list *, int);
+extern void mod_timer(struct timer_list *, unsigned long);
 extern void add_timer(struct timer_list *);
 extern void add_timer_on(struct timer_list *, int cpu);
 
 #define	del_timer(timer)	(void)callout_stop(&(timer)->timer_callout)
 #define	del_timer_sync(timer)	(void)callout_drain(&(timer)->timer_callout)
 #define	timer_pending(timer)	callout_pending(&(timer)->timer_callout)
-#define	round_jiffies(j)	\
-	((int)(((j) + linux_timer_hz_mask) & ~linux_timer_hz_mask))
-#define	round_jiffies_relative(j) round_jiffies(j)
-#define	round_jiffies_up(j)	round_jiffies(j)
-#define	round_jiffies_up_relative(j) round_jiffies_up(j)
+#define	round_jiffies(j) \
+	((unsigned long)(((j) + linux_timer_hz_mask) & ~linux_timer_hz_mask))
+#define	round_jiffies_relative(j) \
+	round_jiffies(j)
+
+#define	round_jiffies_up(j)		round_jiffies(j) /* TODO */
+#define	round_jiffies_up_relative(j)	round_jiffies_up(j) /* TODO */
 
 #endif					/* _LINUX_TIMER_H_ */

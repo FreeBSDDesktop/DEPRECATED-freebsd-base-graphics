@@ -47,6 +47,20 @@ struct lock_class_key {
 
 #define	lockdep_is_held(m)	(sx_xholder(&(m)->sx) == curthread)
 
-#define	might_lock(m)	do { } while (0)
+// XXX: experimental (johalun 20170913)
+#define	lock_is_held(m)	lockdep_is_held(m)
+
+/* static inline int lock_is_held(struct lockdep_map *lock) */
+/* { */
+/* 	return lock_is_held_type(lock, -1); */
+/* } */
+
+
+#define might_lock(lock) do { } while (0)
+#define might_lock_read(lock) do { } while (0)
+
+# define lock_acquire(l, s, t, r, c, n, i)	do { } while (0)
+# define lock_release(l, n, i)			do { } while (0)
+
 
 #endif /* _LINUX_LOCKDEP_H_ */

@@ -56,7 +56,7 @@ loff_t seq_lseek(struct file *file, loff_t offset, int whence);
 int single_open(struct file *, int (*)(struct seq_file *, void *), void *);
 int single_release(struct inode *, struct file *);
 
-#define seq_printf(m, fmt, ...) sbuf_printf((m)->buf, (fmt), ##__VA_ARGS__)
+#define seq_printf(m, fmt, ...) sbuf_printf(((struct seq_file*)m)->buf, (fmt), ##__VA_ARGS__)
 
 #define seq_puts(m, str)	sbuf_printf((m)->buf, str)
 #define seq_putc(m, str)	sbuf_putc((m)->buf, str)

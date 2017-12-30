@@ -36,6 +36,7 @@
 #include <linux/compiler.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <linux/lockdep.h>
 
 #include <asm/atomic.h>
 
@@ -96,11 +97,16 @@ extern wait_queue_func_t autoremove_wake_function;
 	};								\
 	MTX_SYSINIT(name, &(name).lock.m, spin_lock_name("wqhead"), MTX_DEF)
 
-#define	init_waitqueue_head(wqh) do {					\
-	mtx_init(&(wqh)->lock.m, spin_lock_name("wqhead"),		\
-	    NULL, MTX_DEF | MTX_NEW | MTX_NOWITNESS);			\
-	INIT_LIST_HEAD(&(wqh)->task_list);				\
+static inline void
+__init_waitqueue_head(wait_queue_head_t *wqh, __unused const void *name, __unused void *key) {
+	mtx_init(&(wqh)->lock.m, spin_lock_name("wqhead"), NULL, MTX_DEF | MTX_NEW | MTX_NOWITNESS);
+	INIT_LIST_HEAD(&(wqh)->task_list);
+}
+
+#define	init_waitqueue_head(wqh) do {		\
+	__init_waitqueue_head(wqh, NULL, NULL); \
 } while (0)
+
 
 void linux_wake_up(wait_queue_head_t *, unsigned int, int, bool);
 
@@ -127,14 +133,16 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
  */
 #define	__wait_event_common(wqh, cond, timeout, state, lock) ({	\
 	DEFINE_WAIT(__wq);					\
-	const int __timeout = ((int)(timeout)) < 1 ? 1 : (timeout);	\
+	const int __timeout = (timeout) < 1 ? 1 : (timeout);	\
 	int __start = ticks;					\
 	int __ret = 0;						\
 								\
 	for (;;) {						\
 		linux_prepare_to_wait(&(wqh), &__wq, state);	\
-		if (cond)					\
+		if (cond) {					\
+			__ret = 1;				\
 			break;					\
+		}						\
 		__ret = linux_wait_event_common(&(wqh), &__wq,	\
 		    __timeout, state, lock);			\
 		if (__ret != 0)					\
@@ -156,10 +164,10 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
 	__ret;							\
 })
 
-#define	wait_event(wqh, cond) do {					\
-	(void) __wait_event_common(wqh, cond, MAX_SCHEDULE_TIMEOUT,	\
+#define	wait_event(wqh, cond) ({					\
+	__wait_event_common(wqh, cond, MAX_SCHEDULE_TIMEOUT,		\
 	    TASK_UNINTERRUPTIBLE, NULL);				\
-} while (0)
+})
 
 #define	wait_event_timeout(wqh, cond, timeout) ({			\
 	__wait_event_common(wqh, cond, timeout, TASK_UNINTERRUPTIBLE,	\

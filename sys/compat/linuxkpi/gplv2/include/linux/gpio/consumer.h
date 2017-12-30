@@ -57,6 +57,23 @@ gpiod_put(struct gpio_desc *desc)
 	UNIMPLEMENTED();
 }
 
+static inline struct gpio_desc *__must_check
+devm_gpiod_get_index(struct device *dev,
+					 const char *con_id,
+					 unsigned int idx,
+					 enum gpiod_flags flags)
+{
+	UNIMPLEMENTED();
+	return ERR_PTR(-ENOSYS);
+}
+
+static inline void gpiod_set_value(struct gpio_desc *desc, int value)
+{
+	UNIMPLEMENTED();
+	/* GPIO can never have been requested */
+	WARN_ON(1);
+}
+
 /* Value get/set from sleeping context */
 int gpiod_get_value_cansleep(const struct gpio_desc *desc);
 

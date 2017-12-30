@@ -56,6 +56,8 @@
 #define	__devexit
 #define __exit
 #define	__rcu
+#define __percpu
+#define __weak		__attribute__((weak))
 #define	__malloc
 #define	___stringify(...)		#__VA_ARGS__
 #define	__stringify(...)		___stringify(__VA_ARGS__)
@@ -80,7 +82,7 @@
 #define	__PASTE(a,b) ___PASTE(a,b)
 
 #define	ACCESS_ONCE(x)			(*(volatile __typeof(x) *)&(x))
-  
+
 #define	WRITE_ONCE(x,v) do {		\
 	barrier();			\
 	ACCESS_ONCE(x) = (v);		\

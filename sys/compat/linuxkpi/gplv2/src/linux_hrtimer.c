@@ -81,13 +81,19 @@ linux_hrtimer_init(struct hrtimer *hrtimer)
 
 	hrtimer->flags = 0;
 	mtx_init(&hrtimer->mtx, "hrtimer", NULL, MTX_DEF | MTX_RECURSE);
+#pragma GCC warning "Do we need to use Giant lock here?"
 	callout_init_mtx(&hrtimer->callout, &hrtimer->mtx, 0);
+#if 0
+	// Use this?
+	callout_init_mtx(&hrtimer->callout, &hrtimer->mtx, CALLOUT_MPSAFE);
+#endif
 }
 
 void
 linux_hrtimer_set_expires(struct hrtimer *hrtimer __unused,
     ktime_t time __unused)
 {
+#pragma GCC warning "Missing implementation!!  (only used by amdgpu/dce_virtual.c, do we need it?)"
 }
 
 void
@@ -102,8 +108,16 @@ linux_hrtimer_start_range_ns(struct hrtimer *hrtimer, ktime_t time, long nsec)
 {
 
 	mtx_lock(&hrtimer->mtx);
-	callout_reset_sbt(&hrtimer->callout, time.tv64 * SBT_1NS,
-	    nsec * SBT_1NS, hrtimer_call_handler, hrtimer, 0);
+	callout_reset_sbt(&hrtimer->callout, nstosbt(time),
+					  nstosbt(nsec), hrtimer_call_handler, hrtimer, 0);
 	hrtimer->flags |= HRTIMER_ACTIVE;
+	mtx_unlock(&hrtimer->mtx);
+}
+
+void
+linux_hrtimer_forward_now(struct hrtimer *hrtimer, ktime_t interval)
+{
+	mtx_lock(&hrtimer->mtx);
+	callout_schedule(&hrtimer->callout, nstosbt(interval));
 	mtx_unlock(&hrtimer->mtx);
 }

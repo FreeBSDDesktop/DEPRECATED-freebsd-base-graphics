@@ -189,7 +189,7 @@ kobject_add_complete(struct kobject *kobj, struct kobject *parent)
 		}
 		if (error)
 			sysfs_remove_dir(kobj);
-		
+
 	}
 	return (error);
 }
@@ -545,20 +545,21 @@ linux_cdev_pager_populate(vm_object_t vm_obj, vm_pindex_t pidx, int fault_type,
 		struct vm_fault vmf;
 
 		/* fill out VM fault structure */
-		vmf.virtual_address = (void *)((uintptr_t)pidx << PAGE_SHIFT);
+		vmf.address = (unsigned long)((uintptr_t)pidx << PAGE_SHIFT);
 		vmf.flags = (fault_type & VM_PROT_WRITE) ? FAULT_FLAG_WRITE : 0;
 		vmf.pgoff = 0;
 		vmf.page = NULL;
+		vmf.vma = vmap;
 
 		vmap->vm_pfn_count = 0;
 		vmap->vm_pfn_pcount = &vmap->vm_pfn_count;
 		vmap->vm_obj = vm_obj;
 
-		err = vmap->vm_ops->fault(vmap, &vmf);
+		err = vmap->vm_ops->fault(&vmf);
 
 		while (vmap->vm_pfn_count == 0 && err == VM_FAULT_NOPAGE) {
 			kern_yield(PRI_USER);
-			err = vmap->vm_ops->fault(vmap, &vmf);
+			err = vmap->vm_ops->fault(&vmf);
 		}
 	}
 
@@ -1280,7 +1281,7 @@ linux_dev_mmap_single(struct cdev *dev, vm_ooffset_t *offset,
 	vmap->vm_end = size;
 	vmap->vm_pgoff = *offset / PAGE_SIZE;
 	vmap->vm_pfn = 0;
-	vmap->vm_flags = vmap->vm_page_prot = (nprot & VM_PROT_ALL);
+	vmap->vm_flags = vmap->vm_page_prot = nprot;
 	vmap->vm_ops = NULL;
 	vmap->vm_file = get_file(filp);
 	vmap->vm_mm = mm;
@@ -1708,11 +1709,11 @@ linux_timer_callback_wrapper(void *context)
 }
 
 void
-mod_timer(struct timer_list *timer, int expires)
+mod_timer(struct timer_list *timer, unsigned long expires)
 {
 
 	timer->expires = expires;
-	callout_reset(&timer->timer_callout,		      
+	callout_reset(&timer->timer_callout,
 	    linux_timer_jiffies_until(expires),
 	    &linux_timer_callback_wrapper, timer);
 }
@@ -1770,10 +1771,10 @@ linux_complete_common(struct completion *c, int all)
 /*
  * Indefinite wait for done != 0 with or without signals.
  */
-int
+long
 linux_wait_for_common(struct completion *c, int flags)
 {
-	int error;
+	long error;
 
 	if (SCHEDULER_STOPPED())
 		return (0);
@@ -1810,11 +1811,10 @@ intr:
 /*
  * Time limited wait for done != 0 with or without signals.
  */
-int
-linux_wait_for_timeout_common(struct completion *c, int timeout, int flags)
+long
+linux_wait_for_timeout_common(struct completion *c, long timeout, int flags)
 {
-	int end = jiffies + timeout;
-	int error;
+	long end = jiffies + timeout, error;
 	int ret;
 
 	if (SCHEDULER_STOPPED())

@@ -135,16 +135,16 @@ kobject_create_and_add(const char *name, struct kobject *parent)
 	return (NULL);
 }
 
-static inline void
-kobject_del(struct kobject *kobj __unused)
-{
-}
-
 static inline char *
 kobject_name(const struct kobject *kobj)
 {
 
 	return kobj->name;
+}
+
+static inline void
+kobject_del(struct kobject *kobj)
+{
 }
 
 int	kobject_set_name(struct kobject *kobj, const char *fmt, ...);

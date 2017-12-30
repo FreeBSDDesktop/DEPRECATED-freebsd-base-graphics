@@ -111,7 +111,7 @@ tasklet_subsystem_init(void *arg __unused)
 		    "tasklet", i, -1, buf);
        }
 }
-SYSINIT(linux_tasklet, SI_SUB_TASKQ, SI_ORDER_THIRD, tasklet_subsystem_init, NULL);
+SYSINIT(linux_tasklet, SI_SUB_INIT_IF, SI_ORDER_THIRD, tasklet_subsystem_init, NULL);
 
 static void
 tasklet_subsystem_uninit(void *arg __unused)
@@ -129,7 +129,7 @@ tasklet_subsystem_uninit(void *arg __unused)
 		mtx_destroy(&tw->mtx);
 	}
 }
-SYSUNINIT(linux_tasklet, SI_SUB_TASKQ, SI_ORDER_THIRD, tasklet_subsystem_uninit, NULL);
+SYSUNINIT(linux_tasklet, SI_SUB_INIT_IF, SI_ORDER_THIRD, tasklet_subsystem_uninit, NULL);
 
 void
 tasklet_init(struct tasklet_struct *ts,
@@ -195,4 +195,16 @@ tasklet_kill(struct tasklet_struct *ts)
 	/* wait until tasklet is no longer busy */
 	while (TASKLET_ST_GET(ts) != TASKLET_ST_IDLE)
 		pause("W", 1);
+}
+
+void tasklet_enable(struct tasklet_struct *ts)
+{
+	struct tasklet_worker *tw;
+	tw = &DPCPU_GET(tasklet_worker);
+}
+
+void tasklet_disable(struct tasklet_struct *ts)
+{
+	struct tasklet_worker *tw;
+	tw = &DPCPU_GET(tasklet_worker);
 }

@@ -3,6 +3,10 @@
 SYSDIR?=${SRCTOP}/sys
 .include "${SYSDIR}/conf/kern.opts.mk"
 
+.if (${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "arm64")
+_vc4= vc4
+.endif
+
 .if ${MACHINE_CPUARCH} == "amd64"
 _i915kms=	i915
 _radeonkms=	radeonkms
@@ -33,6 +37,7 @@ _radeonkmsfw=	radeonkmsfw
 SUBDIR = \
 	drm \
 	amd \
+	${_vc4} \
 	${_i915kms} \
 	${_amdgpukmsfw} \
 	${_radeonkmsfw} \

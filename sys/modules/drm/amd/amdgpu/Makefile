@@ -19,9 +19,9 @@ KMOD	= amdgpu
 
 SRCS	= \
 	amdgpu.h \
-        amdgpu_acpi.c \
-        amdgpu_afmt.c \
-        amdgpu_amdkfd.c \
+	amdgpu_acpi.c \
+	amdgpu_afmt.c \
+	amdgpu_amdkfd.c \
 	amdgpu_amdkfd_gfx_v7.c \
 	amdgpu_amdkfd_gfx_v8.c \
 	amdgpu_atombios.c \
@@ -67,6 +67,7 @@ SRCS	= \
 	amdgpu_uvd.c \
 	amdgpu_vce.c \
 	amdgpu_vm.c \
+	amdgpu_vram_mgr.c \
 	amd_powerplay.c \
 	atom.c \
 	atombios_crtc.c \
@@ -79,10 +80,8 @@ SRCS	= \
 	cik_ih.c \
 	cik_sdma.c \
 	cz_clockpowergating.c \
-	cz_dpm.c \
-        cz_ih.c \
+    cz_ih.c \
 	cz_hwmgr.c \
-        cz_smc.c \
 	cz_smumgr.c \
 	dce_v6_0.c \
 	dce_v8_0.c \
@@ -123,11 +122,6 @@ SRCS	= \
 	sched_fence.c \
 	sdma_v2_4.c \
 	sdma_v3_0.c \
-	si.c \
-	si_dma.c \
-	si_dpm.c \
-	si_ih.c \
-	si_smc.c \
 	smumgr.c \
 	smu7_clockpowergating.c \
 	smu7_hwmgr.c \
@@ -143,6 +137,13 @@ SRCS	= \
 	vce_v2_0.c \
 	vce_v3_0.c \
 	vi.c
+
+# Causes error if CONFIG_DRM_AMDGPU_SI is not defined, which is default
+	# si.c \
+	# si_dma.c \
+	# si_dpm.c \
+	# si_ih.c \
+	# si_smc.c \
 
 CFLAGS+=	-I${SRCTOP}/sys
 CFLAGS+=	-I${SRCTOP}/sys/compat/linuxkpi/dummy/include
@@ -181,8 +182,16 @@ CWARNFLAGS+=	-Wno-pointer-arith -Wno-format
 CWARNFLAGS+=	-Wno-pointer-sign ${CWARNFLAGS.${.IMPSRC:T}}
 CWARNFLAGS+=	-Wno-expansion-to-defined
 
+
+# No end to this. Remove volatile temporary in struct amdgpu_ring instead..
+# CWARNFLAGS.amdgpu_afmt.c= 	-Wno-cast-qual # For volatile to non-volatile casting in amdgpu.h
+# CWARNFLAGS.amdgpu_benchmark.c= 	-Wno-cast-qual # For volatile to non-volatile casting in amdgpu.h
+# CWARNFLAGS.amdgpu_bios.c= 	-Wno-cast-qual # For volatile to non-volatile casting in amdgpu.h
+# CWARNFLAGS.amdgpu_ctx.c= 	-Wno-cast-qual # For volatile to non-volatile casting in amdgpu.h
+# CWARNFLAGS.amdgpu_display.c= 	-Wno-cast-qual # For volatile to non-volatile casting in amdgpu.h
+
 CWARNFLAGS.amdgpu_acpi.c=	-Wno-int-conversion -Wno-missing-prototypes -Wno-unused-variable
-CWARNFLAGS.amdgpu_amdkfd.c=	-Wno-missing-prototypes
+CWARNFLAGS.amdgpu_amdkfd.c=	-Wno-missing-prototypes 
 CWARNFLAGS.amdgpu_amdkfd_gfx_v7.c=	-Wno-cast-qual
 CWARNFLAGS.amdgpu_amdkfd_gfx_v8.c=	-Wno-cast-qual
 CWARNFLAGS.amdgpu_atpx_handler.c=	-Wno-missing-prototypes
@@ -210,7 +219,7 @@ CWARNFLAGS.cz_smc.c=	-Wno-missing-prototypes
 CWARNFLAGS.cz_clockpowergating.c=	-Wno-missing-prototypes -Wno-enum-conversion
 CWARNFLAGS.cz_hwmgr.c=	-Wno-missing-prototypes -Wno-cast-qual
 CWARNFLAGS.dce_virtual.c=	-Wno-missing-prototypes
-CWARNFLAGS.dce_v6_0.c=	 -Wno-unused-const-variable
+CWARNFLAGS.dce_v6_0.c=	 -Wno-unused-const-variable -Wno-missing-prototypes
 CWARNFLAGS.dce_v8_0.c=	-Wno-missing-prototypes
 CWARNFLAGS.dce_v10_0.c=	-Wno-missing-prototypes
 CWARNFLAGS.dce_v11_0.c=	-Wno-missing-prototypes
@@ -241,7 +250,7 @@ CWARNFLAGS.processpptables.c=	-Wno-missing-prototypes -Wno-sometimes-uninitializ
 CWARNFLAGS.process_pptables_v1_0.c=	-Wno-missing-prototypes -Wno-cast-qual
 CWARNFLAGS.sdma_v3_0.c=		-Wno-missing-prototypes
 CWARNFLAGS.si.c=		-Wno-missing-prototypes
-CWARNFLAGS.smu7_clockpowergating.c=		-Wno-missing-prototypes
+CWARNFLAGS.smu7_clockpowergating.c=		-Wno-missing-prototypes -Wno-enum-conversion
 CWARNFLAGS.smu7_hwmgr.c=		-Wno-missing-prototypes  -Wno-cast-qual
 CWARNFLAGS.tonga_clockpowergating.c=	-Wno-missing-prototypes -Wno-enum-conversion
 CWARNFLAGS.tonga_hwmgr.c=	-Wno-missing-prototypes -Wno-cast-qual -Wno-unused-const-variable

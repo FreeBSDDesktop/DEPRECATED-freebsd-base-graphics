@@ -106,10 +106,18 @@ print_hex_dump_bytes(const char *prefix_str, const int prefix_type,
 	print_hex_dump(NULL, prefix_str, prefix_type, 16, 1, buf, len, 0);
 }
 
+static inline int
+printk_ratelimit() {
+	// XXX: Used in amdgpu/gmc_v{6,7,8}_0.c
+	// Return 0 means no dev_err output.
+	return 1;
+}
+
 #define	printk_ratelimited(...) do {		\
 	static linux_ratelimit_t __ratelimited;	\
 	if (linux_ratelimited(&__ratelimited))	\
 		printk(__VA_ARGS__);		\
-} while (0)
+	} while (0);					\
+		return 1
 
 #endif					/* _LINUX_PRINTK_H_ */

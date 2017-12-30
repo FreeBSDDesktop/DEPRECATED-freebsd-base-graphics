@@ -63,7 +63,7 @@ __FBSDID("$FreeBSD$");
 #include <linux/preempt.h>
 #include <linux/fs.h>
 
-#if defined(__amd64__) || defined(__aarch64__) || defined(__riscv)
+#if defined(__amd64__) || defined(__aarch64__) || defined(__riscv__)
 #define	LINUXKPI_HAVE_DMAP
 #else
 #undef	LINUXKPI_HAVE_DMAP
@@ -264,10 +264,11 @@ __get_user_pages_fast(unsigned long start, int nr_pages, int write,
 	return (count);
 }
 
+#pragma GCC warning "int *locked added to function def., do we need to use it?"
 long
 get_user_pages_remote(struct task_struct *task, struct mm_struct *mm,
     unsigned long start, unsigned long nr_pages, int gup_flags,
-    struct page **pages, struct vm_area_struct **vmas)
+    struct page **pages, struct vm_area_struct **vmas, int *locked)
 {
 	vm_map_t map;
 
