@@ -30,6 +30,9 @@
 #undef	CONFIG_INTEL_IOMMU
 #endif
 
+// For platforms with SSE4.1 (needed for GuC logging)
+/* #define CONFIG_AS_MOVNTDQA */
+
 #define	CONFIG_AGP	1
 #define	CONFIG_MTRR	1
 

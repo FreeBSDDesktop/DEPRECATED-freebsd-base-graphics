@@ -39,7 +39,7 @@ static struct sync_file *sync_file_alloc(void)
 		return NULL;
 
 	#pragma GCC warning "anon_inode need proper impl and sync_file need testing for 4.12!"
-	sync_file->file = anon_inode_getfile("/dev/linuxkpi_sync_file",
+	sync_file->file = anon_inode_getfile("sync_file",
 										 &sync_file_fops, sync_file, 0);
 	if (IS_ERR(sync_file->file))
 		goto err;

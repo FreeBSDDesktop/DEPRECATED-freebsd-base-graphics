@@ -3,8 +3,17 @@
 #define _LINUX_RELAY_H
 
 #include <linux/types.h>
+#include <linux/sched.h>
+#include <linux/timer.h>
+#include <linux/wait.h>
+#include <linux/list.h>
+/* #include <linux/irq_work.h> */
+#include <linux/bug.h>
 #include <linux/fs.h>
+#include <linux/poll.h>
 #include <linux/kref.h>
+/* #include <linux/percpu.h> */
+#include <asm/smp.h>
 
 
 
@@ -13,7 +22,18 @@
 
 // Naive (not per-cpu) relay channel impl
 
-struct rchan_buf {
+#define irq_work_sync(x)
+#define irq_work_queue(x)
+#define init_irq_work(x, y)
+#define alloc_percpu(x) kmalloc(mp_ncpus*sizeof(x), GFP_KERNEL)
+
+
+struct irq_work {
+	
+};
+	
+struct rchan_buf
+{
 	void *start;			/* start of channel buffer */
 	void *data;			/* start of current sub-buffer */
 	size_t offset;			/* current offset into sub-buffer */
@@ -21,17 +41,21 @@ struct rchan_buf {
 	size_t subbufs_consumed;	/* count of sub-buffers consumed */
 	struct rchan *chan;		/* associated channel */
 	wait_queue_head_t read_wait;	/* reader wait queue */
+	struct irq_work wakeup_work;	/* reader wakeup */
 	struct dentry *dentry;		/* channel file dentry */
 	struct kref kref;		/* channel buffer refcount */
+	struct page **page_array;	/* array of current buffer pages */
 	unsigned int page_count;	/* number of current buffer pages */
 	unsigned int finalized;		/* buffer has been finalized */
 	size_t *padding;		/* padding counts per sub-buffer */
 	size_t prev_padding;		/* temporary variable */
 	size_t bytes_consumed;		/* bytes consumed in cur read subbuf */
 	size_t early_bytes;		/* bytes consumed before VFS inited */
+	unsigned int cpu;		/* this buf's cpu */
 };
 
-struct rchan {
+struct rchan
+{
 	u32 version;			/* the version of this struct */
 	size_t subbuf_size;		/* sub-buffer size */
 	size_t n_subbufs;		/* number of sub-buffers per buffer */
@@ -47,6 +71,7 @@ struct rchan {
 	int has_base_filename;		/* has a filename associated? */
 	char base_filename[NAME_MAX];	/* saved base filename */
 };
+
 
 struct rchan_callbacks {
 	int (*subbuf_start) (struct rchan_buf *buf,
@@ -95,22 +120,31 @@ static inline void __relay_write(struct rchan *chan,
 								 const void *data,
 								 size_t length) {
 	struct rchan_buf *buf;
-	buf = chan->buf[0];
-	if (unlikely(buf->offset + length > chan->subbuf_size))
+	int curr_cpu;
+	
+	curr_cpu = get_cpu();
+	buf = chan->buf[curr_cpu];
+	if (unlikely(buf->offset + length > buf->chan->subbuf_size))
 		length = relay_switch_subbuf(buf, length);
 	memcpy((char*)buf->data + buf->offset, data, length);
 	buf->offset += length;
+	put_cpu();
 }
 
 static inline void relay_write(struct rchan *chan,
 							   const void *data,
 							   size_t length) {
+	/* unsigned long flags; */
+	/* local_irq_save(flags); */ // NOOP on FreeBSD
 	__relay_write(chan, data, length);
+	/* local_irq_restore(flags); */
 }
 
-static inline void *relay_reserve(struct rchan *chan, size_t length) {
+static inline void *relay_reserve(struct rchan *chan, size_t length)
+{
 	void *reserved = NULL;
-	struct rchan_buf *buf = chan->buf[0];
+	int curr_cpu = get_cpu();
+	struct rchan_buf *buf = chan->buf[curr_cpu];
 
 	if (unlikely(buf->offset + length > buf->chan->subbuf_size)) {
 		length = relay_switch_subbuf(buf, length);
@@ -121,6 +155,7 @@ static inline void *relay_reserve(struct rchan *chan, size_t length) {
 	buf->offset += length;
 
 end:
+	put_cpu();
 	return reserved;
 }
 
@@ -133,7 +168,7 @@ static inline void subbuf_start_reserve(struct rchan_buf *buf,
 extern const struct file_operations relay_file_operations;
 
 
-#define relay_prepare_cpu(x)
+int relay_prepare_cpu(unsigned int cpu);
 
 
 #endif /* _LINUX_RELAY_H */

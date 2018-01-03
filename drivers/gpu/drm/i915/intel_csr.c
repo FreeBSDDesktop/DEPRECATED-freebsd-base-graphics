@@ -392,6 +392,7 @@ static uint32_t *parse_csr_fw(struct drm_i915_private *dev_priv,
 
 static void csr_load_work_fn(struct work_struct *work)
 {
+	DRM_INFO("DMC: load work fn start\n");
 	struct drm_i915_private *dev_priv;
 	struct intel_csr *csr;
 	const struct firmware *fw = NULL;
@@ -422,6 +423,7 @@ static void csr_load_work_fn(struct work_struct *work)
 	}
 
 	release_firmware(fw);
+	DRM_INFO("DMC: load work fn end\n");
 }
 
 /**

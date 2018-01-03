@@ -272,13 +272,13 @@ static inline bool guc_ucode_response(struct drm_i915_private *dev_priv,
 static int guc_ucode_xfer_dma(struct drm_i915_private *dev_priv,
 			      struct i915_vma *vma)
 {
+	DRM_INFO("%s: enter\n", __func__);
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 	unsigned long offset;
 	struct sg_table *sg = vma->pages;
 	u32 status, rsa[UOS_RSA_SCRATCH_MAX_COUNT];
 	int i, ret = 0;
 
-	printf("%s: entering\n", __func__);
 	
 	/* where RSA signature starts */
 	offset = guc_fw->rsa_offset;
@@ -323,17 +323,24 @@ static int guc_ucode_xfer_dma(struct drm_i915_private *dev_priv,
 	 * (Higher levels of the driver will attempt to fall back to
 	 * execlist mode if this happens.)
 	 */
+#ifdef __FreeBSD__
+	// Double the time to see if we increase success rate
+	ret = wait_for(guc_ucode_response(dev_priv, &status), 500);
+#else
 	ret = wait_for(guc_ucode_response(dev_priv, &status), 100);
-
-	DRM_DEBUG_DRIVER("DMA status 0x%x, GuC status 0x%x\n",
+#endif
+	DRM_INFO("GuC DMA transfer wait over with ret %d\n", ret);
+	DRM_INFO("DMA status 0x%x, GuC status 0x%x\n",
 			I915_READ(DMA_CTRL), status);
+	/* DRM_DEBUG_DRIVER("DMA status 0x%x, GuC status 0x%x\n", */
+	/* 		I915_READ(DMA_CTRL), status); */
 
 	if ((status & GS_BOOTROM_MASK) == GS_BOOTROM_RSA_FAILED) {
 		DRM_ERROR("GuC firmware signature verification failed\n");
 		ret = -ENOEXEC;
 	}
 
-	DRM_DEBUG_DRIVER("returning %d\n", ret);
+	DRM_INFO("%s: exit\n", __func__);
 
 	return ret;
 }
@@ -354,11 +361,11 @@ u32 intel_guc_wopcm_size(struct drm_i915_private *dev_priv)
  */
 static int guc_ucode_xfer(struct drm_i915_private *dev_priv)
 {
+	DRM_INFO("%s: enter\n", __func__);
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 	struct i915_vma *vma;
 	int ret;
 
-	printf("%s: entering\n", __func__);
 	
 	ret = i915_gem_object_set_to_gtt_domain(guc_fw->obj, false);
 	if (ret) {
@@ -417,12 +424,13 @@ static int guc_ucode_xfer(struct drm_i915_private *dev_priv)
 	 * now that DMA has completed, so it doesn't continue to take up space.
 	 */
 	i915_vma_unpin(vma);
-
+	DRM_INFO("%s: exit\n", __func__);
 	return ret;
 }
 
 static int guc_hw_reset(struct drm_i915_private *dev_priv)
 {
+	DRM_INFO("%s: enter\n", __func__);
 	int ret;
 	u32 guc_status;
 
@@ -436,6 +444,7 @@ static int guc_hw_reset(struct drm_i915_private *dev_priv)
 	WARN(!(guc_status & GS_MIA_IN_RESET),
 	     "GuC status: 0x%x, MIA core expected to be in reset\n", guc_status);
 
+	DRM_INFO("%s: exit\n", __func__);
 	return ret;
 }
 
@@ -454,16 +463,20 @@ static int guc_hw_reset(struct drm_i915_private *dev_priv)
  */
 int intel_guc_setup(struct drm_i915_private *dev_priv)
 {
+	DRM_INFO("%s: enter\n", __func__);
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 	const char *fw_path = guc_fw->path;
 	int retries, ret, err;
 
-	printf("%s: entering\n", __func__);
 	
-	DRM_DEBUG_DRIVER("GuC fw status: path %s, fetch %s, load %s\n",
+	DRM_INFO("GuC fw status: path %s, fetch %s, load %s\n",
 		fw_path,
 		intel_uc_fw_status_repr(guc_fw->fetch_status),
 		intel_uc_fw_status_repr(guc_fw->load_status));
+	/* DRM_DEBUG_DRIVER("GuC fw status: path %s, fetch %s, load %s\n", */
+	/* 	fw_path, */
+	/* 	intel_uc_fw_status_repr(guc_fw->fetch_status), */
+	/* 	intel_uc_fw_status_repr(guc_fw->load_status)); */
 
 	/* Loading forbidden, or no firmware to load? */
 	if (!i915.enable_guc_loading) {
@@ -550,6 +563,7 @@ int intel_guc_setup(struct drm_i915_private *dev_priv)
 		guc_interrupts_capture(dev_priv);
 	}
 
+	DRM_INFO("%s: exit\n", __func__);
 	return 0;
 
 fail:
@@ -596,6 +610,7 @@ fail:
 			DRM_ERROR("GuC init failed: %d\n", ret);
 	}
 	i915.enable_guc_submission = 0;
+	DRM_INFO("%s: exit with fail\n", __func__);
 
 	return ret;
 }
@@ -603,6 +618,7 @@ fail:
 void intel_uc_fw_fetch(struct drm_i915_private *dev_priv,
 			 struct intel_uc_fw *uc_fw)
 {
+	DRM_INFO("%s: enter\n", __func__);
 	struct pci_dev *pdev = dev_priv->drm.pdev;
 	struct drm_i915_gem_object *obj;
 	const struct firmware *fw = NULL;
@@ -610,8 +626,10 @@ void intel_uc_fw_fetch(struct drm_i915_private *dev_priv,
 	size_t size;
 	int err;
 
-	DRM_DEBUG_DRIVER("before requesting firmware: uC fw fetch status %s\n",
+	DRM_INFO("before requesting firmware: uC fw fetch status %s\n",
 		intel_uc_fw_status_repr(uc_fw->fetch_status));
+	/* DRM_DEBUG_DRIVER("before requesting firmware: uC fw fetch status %s\n", */
+	/* 	intel_uc_fw_status_repr(uc_fw->fetch_status)); */
 
 	err = request_firmware(&fw, uc_fw->path, &pdev->dev);
 	if (err)
@@ -719,6 +737,7 @@ void intel_uc_fw_fetch(struct drm_i915_private *dev_priv,
 
 	release_firmware(fw);
 	uc_fw->fetch_status = INTEL_UC_FIRMWARE_SUCCESS;
+	DRM_INFO("%s: exit\n", __func__);
 	return;
 
 fail:
@@ -736,6 +755,7 @@ fail:
 
 	release_firmware(fw);		/* OK even if fw is NULL */
 	uc_fw->fetch_status = INTEL_UC_FIRMWARE_FAIL;
+	DRM_INFO("%s: exit with fail\n", __func__);
 }
 
 /**
@@ -749,7 +769,7 @@ fail:
  */
 void intel_guc_init(struct drm_i915_private *dev_priv)
 {
-	printf("%s: entering\n", __func__);
+	DRM_INFO("%s: enter\n", __func__);
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 	const char *fw_path;
 
@@ -798,6 +818,7 @@ void intel_guc_init(struct drm_i915_private *dev_priv)
 	DRM_DEBUG_DRIVER("GuC firmware pending, path %s\n", fw_path);
 	intel_uc_fw_fetch(dev_priv, guc_fw);
 	/* status must now be FAIL or SUCCESS */
+	DRM_INFO("%s: exit\n", __func__);
 }
 
 /**
@@ -806,7 +827,7 @@ void intel_guc_init(struct drm_i915_private *dev_priv)
  */
 void intel_guc_fini(struct drm_i915_private *dev_priv)
 {
-	printf("%s: entering\n", __func__);
+	DRM_INFO("%s: enter\n", __func__);
 	
 	struct intel_uc_fw *guc_fw = &dev_priv->guc.fw;
 
@@ -821,4 +842,5 @@ void intel_guc_fini(struct drm_i915_private *dev_priv)
 	mutex_unlock(&dev_priv->drm.struct_mutex);
 
 	guc_fw->fetch_status = INTEL_UC_FIRMWARE_NONE;
+	DRM_INFO("%s: exit\n", __func__);
 }

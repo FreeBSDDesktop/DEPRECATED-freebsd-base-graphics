@@ -166,7 +166,6 @@ static int guc_log_create_relay_channel(struct intel_guc *guc)
 		DRM_ERROR("Couldn't create relay chan for GuC logging\n");
 		return -ENOMEM;
 	}
-
 	GEM_BUG_ON(guc_log_relay_chan->subbuf_size < subbuf_size);
 	guc->log.relay_chan = guc_log_relay_chan;
 	return 0;
@@ -487,16 +486,21 @@ void intel_guc_log_create(struct intel_guc *guc)
 		 * it should be present on the chipsets supporting GuC based
 		 * submisssions.
 		 */
+		
+		// Force guc log with "slow" memcpy (fast read n/a on FreeBSD)
+#ifndef __FreeBSD__
 		if (WARN_ON(!i915_has_memcpy_from_wc())) {
 			/* logging will not be enabled */
 			i915.guc_log_level = -1;
+			DRM_ERROR("i915_has_memcpy_from_wc() failed: disabling GuC log.\n");
 			return;
 		}
-
+#endif
 		vma = intel_guc_allocate_vma(guc, size);
 		if (IS_ERR(vma)) {
 			/* logging will be off */
 			i915.guc_log_level = -1;
+			DRM_ERROR("intel_guc_allocate_vma() failed: disabling GuC log.\n");
 			return;
 		}
 
@@ -506,6 +510,7 @@ void intel_guc_log_create(struct intel_guc *guc)
 			guc_log_cleanup(guc);
 			i915_vma_unpin_and_release(&guc->log.vma);
 			i915.guc_log_level = -1;
+			DRM_ERROR("guc_log_create_extras() failed: disabling GuC log.\n");
 			return;
 		}
 	}

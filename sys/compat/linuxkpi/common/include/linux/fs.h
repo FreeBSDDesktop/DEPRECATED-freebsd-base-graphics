@@ -303,7 +303,7 @@ call_mmap(struct file *file, struct vm_area_struct *vma)
 static inline void
 i_size_write(void *inode, loff_t i_size)
 {
-	printf("%s: unimplemented!", __func__);
+	printf("%s: unimplemented!\n", __func__);
 	
 /* #if BITS_PER_LONG==32 && defined(CONFIG_SMP) */
 /* 	preempt_disable(); */
