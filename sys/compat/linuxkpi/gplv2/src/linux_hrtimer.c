@@ -94,6 +94,7 @@ linux_hrtimer_set_expires(struct hrtimer *hrtimer __unused,
     ktime_t time __unused)
 {
 #pragma GCC warning "Missing implementation!!  (only used by amdgpu/dce_virtual.c, do we need it?)"
+	printf("%s: missing implementation!\n", __func__);
 }
 
 void
