@@ -409,6 +409,7 @@ static int guc_log_create_extras(struct intel_guc *guc)
 	void *vaddr;
 	int ret;
 
+	(void)dev_priv;
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
 	/* Nothing to do */
@@ -530,6 +531,7 @@ static int guc_log_late_setup(struct intel_guc *guc)
 	struct drm_i915_private *dev_priv = guc_to_i915(guc);
 	int ret;
 
+	(void)dev_priv;
 	lockdep_assert_held(&dev_priv->drm.struct_mutex);
 
 	if (i915.guc_log_level < 0)
