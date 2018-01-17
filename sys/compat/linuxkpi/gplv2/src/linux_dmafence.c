@@ -1,12 +1,5 @@
 #include <linux/dma-fence.h>
 #include <linux/dma-fence-array.h>
-
-#include <sys/param.h>
-#include <sys/proc.h>
-#include <sys/condvar.h>
-
-#include <sys/types.h>
-#include <machine/atomic.h>
 #include <asm/atomic64.h>
 
 static atomic64_t dma_fence_context_counter = ATOMIC64_INIT(0);

@@ -32,4 +32,3 @@ __FBSDID("$FreeBSD$");
 
 MODULE_VERSION(linuxkpi_gplv2, 1);
 MODULE_DEPEND(linuxkpi_gplv2, linuxkpi, 1, 1, 1);
-

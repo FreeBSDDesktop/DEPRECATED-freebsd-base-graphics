@@ -1,12 +1,12 @@
-#ifndef LLIST_H
-#define LLIST_H
+#ifndef _LINUX_GPLV2_LLIST_H
+#define _LINUX_GPLV2_LLIST_H
 /*
  * Lock-less NULL terminated single linked list
  *
  * Cases where locking is not needed:
  * If there are multiple producers and multiple consumers, llist_add can be
  * used in producers and llist_del_all can be used in consumers simultaneously
- * without locking. Also a single consumer can use llist_del_first while
+0 * without locking. Also a single consumer can use llist_del_first while
  * multiple producers simultaneously use llist_add, without any locking.
  *
  * Cases where locking is needed:
@@ -202,5 +202,5 @@ extern struct llist_node *llist_del_first(struct llist_head *head);
 
 struct llist_node *llist_reverse_order(struct llist_node *head);
 
-#endif /* LLIST_H */
+#endif /* _LINUX_GPLV2_LLIST_H */
 
