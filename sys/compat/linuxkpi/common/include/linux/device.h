@@ -46,9 +46,6 @@
 
 #include <sys/bus.h>
 
-enum irqreturn	{ IRQ_NONE = 0, IRQ_HANDLED, IRQ_WAKE_THREAD, };
-typedef enum irqreturn	irqreturn_t;
-
 struct device;
 struct fwnode_handle;
 
@@ -184,7 +181,7 @@ show_class_attr_string(struct class *class,
 #define	dev_notice(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
 #define	dev_dbg(dev, fmt, ...)	do { } while (0)
 #define	dev_printk(lvl, dev, fmt, ...)					\
-	    device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+	device_printf(((const struct device *)dev)->bsddev, fmt, ##__VA_ARGS__)
 
 #define	dev_err_ratelimited(dev, ...) do {	\
 	static linux_ratelimit_t __ratelimited;	\

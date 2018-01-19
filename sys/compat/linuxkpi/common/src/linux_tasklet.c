@@ -196,3 +196,15 @@ tasklet_kill(struct tasklet_struct *ts)
 	while (TASKLET_ST_GET(ts) != TASKLET_ST_IDLE)
 		pause("W", 1);
 }
+
+void tasklet_enable(struct tasklet_struct *ts)
+{
+	struct tasklet_worker *tw;
+	tw = &DPCPU_GET(tasklet_worker);
+}
+
+void tasklet_disable(struct tasklet_struct *ts)
+{
+	struct tasklet_worker *tw;
+	tw = &DPCPU_GET(tasklet_worker);
+}

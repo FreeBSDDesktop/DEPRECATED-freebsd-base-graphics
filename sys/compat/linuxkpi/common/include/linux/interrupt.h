@@ -33,13 +33,13 @@
 
 #include <linux/device.h>
 #include <linux/pci.h>
+#include <linux/irqreturn.h>
 
 #include <sys/bus.h>
 #include <sys/rman.h>
 
-typedef	irqreturn_t	(*irq_handler_t)(int, void *);
 
-#define	IRQ_RETVAL(x)	((x) != IRQ_NONE)
+typedef	irqreturn_t	(*irq_handler_t)(int, void *);
 
 #define	IRQF_SHARED	RF_SHAREABLE
 
@@ -168,5 +168,8 @@ extern void tasklet_schedule(struct tasklet_struct *);
 extern void tasklet_kill(struct tasklet_struct *);
 extern void tasklet_init(struct tasklet_struct *, tasklet_func_t *,
     unsigned long data);
+
+extern void tasklet_enable(struct tasklet_struct *);
+extern void tasklet_disable(struct tasklet_struct *);
 
 #endif	/* _LINUX_INTERRUPT_H_ */
