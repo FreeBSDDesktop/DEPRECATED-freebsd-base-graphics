@@ -55,6 +55,9 @@
 #define	__GFP_WAIT	M_WAITOK
 #define	__GFP_DMA32	(1U << 24) /* LinuxKPI only */
 
+#define __GFP_BITS_SHIFT 25
+#define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
+
 #define	GFP_NOWAIT	M_NOWAIT
 #define	GFP_ATOMIC	(M_NOWAIT | M_USE_RESERVE)
 #define	GFP_KERNEL	M_WAITOK
