@@ -1,3 +1,30 @@
+/*-
+ * Copyright (c) 2017 Johannes Lundberg
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice unmodified, this list of conditions, and the following
+ *    disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD$
+ */
 #ifndef __LINUX_DCACHE_H
 #define __LINUX_DCACHE_H
 
@@ -12,22 +39,10 @@ struct inode;
 struct dentry;
 struct path;
 struct pfs_node;
-#define HASH_LEN_DECLARE u32 hash; u32 len
-
-struct qstr {
-	union {
-		struct {
-			HASH_LEN_DECLARE;
-		};
-		u64 hash_len;
-	};
-	const unsigned char *name;
-};
 
 struct dentry {
 	struct inode	*d_inode;
 	struct dentry *d_parent;	/* parent directory */
-	struct qstr d_name;
 	/* FreeBSD */
 	struct pfs_node *d_pfs_node;
 };
