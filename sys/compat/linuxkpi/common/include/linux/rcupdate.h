@@ -82,8 +82,6 @@
 #define	rcu_dereference(p)			\
 	rcu_dereference_protected(p, 0)
 
-// Review needed!
-// Added rcu_dereference_raw, is this OK? 
 #define	rcu_dereference_raw(p)  \
 	((__typeof(*p) *)(p))
 
