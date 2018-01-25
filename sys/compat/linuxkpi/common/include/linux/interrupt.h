@@ -111,6 +111,42 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	return 0;
 }
 
+static inline void
+enable_irq(unsigned int irq)
+{
+	struct irq_ent *irqe;
+	struct device *dev;
+	int error;
+
+	dev = linux_pci_find_irq_dev(irq);
+	if (dev == NULL)
+		return;
+	irqe = linux_irq_ent(dev, irq);
+	if (irqe == NULL)
+		return;
+	error = bus_setup_intr(dev->bsddev, irqe->res, INTR_TYPE_NET | INTR_MPSAFE,
+						   NULL, linux_irq_handler, irqe, &irqe->tag);
+	if (error) {
+		device_printf(dev->bsddev, "linuxkpi enable irq error\n");
+	}
+}
+
+static inline void
+disable_irq(unsigned int irq)
+{
+	struct irq_ent *irqe;
+	struct device *dev;
+
+	dev = linux_pci_find_irq_dev(irq);
+	if (dev == NULL)
+		return;
+	irqe = linux_irq_ent(dev, irq);
+	if (irqe == NULL)
+		return;
+	bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
+	irqe->tag = NULL;
+}
+
 static inline int
 bind_irq_to_cpu(unsigned int irq, int cpu_id)
 {
@@ -142,7 +178,8 @@ free_irq(unsigned int irq, void *device)
 	irqe = linux_irq_ent(dev, irq);
 	if (irqe == NULL)
 		return;
-	bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
+	if (irqe->tag)
+		bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
 	bus_release_resource(dev->bsddev, SYS_RES_IRQ, rid, irqe->res);
 	list_del(&irqe->links);
 	kfree(irqe);

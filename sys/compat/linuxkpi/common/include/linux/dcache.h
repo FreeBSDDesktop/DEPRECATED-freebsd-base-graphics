@@ -28,13 +28,6 @@
 #ifndef __LINUX_DCACHE_H
 #define __LINUX_DCACHE_H
 
-#include <linux/atomic.h>
-#include <linux/list.h>
-#include <linux/rculist.h>
-#include <linux/spinlock.h>
-#include <linux/cache.h>
-#include <linux/rcupdate.h>
-
 struct inode;
 struct dentry;
 struct path;
