@@ -110,7 +110,7 @@ static inline int
 printk_ratelimit() {
 	// XXX: Used in amdgpu/gmc_v{6,7,8}_0.c
 	// Return 0 means no dev_err output.
-	return 1;
+	return (1);
 }
 
 #define	printk_ratelimited(...) do {		\

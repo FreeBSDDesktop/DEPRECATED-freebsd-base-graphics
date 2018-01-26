@@ -138,7 +138,7 @@ static inline /* __deprecated */ __must_check enum mutex_trylock_recursive_enum
 mutex_trylock_recursive(struct mutex *lock)
 {
 	if (unlikely(sx_xholder(&lock->sx) == curthread))
-		return MUTEX_TRYLOCK_RECURSIVE;
+		return (MUTEX_TRYLOCK_RECURSIVE);
 
 	return (mutex_trylock(lock));
 }

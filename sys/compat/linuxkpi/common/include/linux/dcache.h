@@ -43,7 +43,7 @@ struct dentry {
 
 static inline struct inode *d_inode(const struct dentry *dentry)
 {
-	return dentry->d_inode;
+	return (dentry->d_inode);
 }
 
 #endif

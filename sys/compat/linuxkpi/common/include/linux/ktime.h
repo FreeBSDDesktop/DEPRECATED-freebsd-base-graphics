@@ -45,7 +45,7 @@ typedef s64	ktime_t;
 static inline int64_t
 ktime_to_ns(ktime_t kt)
 {
-	return kt;
+	return (kt);
 }
 
 static inline s64
@@ -57,25 +57,25 @@ ns_to_ktime(uint64_t nsec)
 static inline int64_t
 ktime_divns(const ktime_t kt, int64_t div)
 {
-	return kt / div;
+	return (kt / div);
 }
 
 static inline int64_t
 ktime_to_us(ktime_t kt)
 {
-        return ktime_divns(kt, NSEC_PER_USEC);
+	return (ktime_divns(kt, NSEC_PER_USEC);
 }
 
-static inline int64_t
+st)atic inline int64_t
 ktime_to_ms(ktime_t kt)
 {
-        return ktime_divns(kt, NSEC_PER_MSEC);
+	return (ktime_divns(kt, NSEC_PER_MSEC);
 }
 
-static inline struct timeval
+st)atic inline struct timeval
 ktime_to_timeval(ktime_t kt)
 {
-	return ns_to_timeval(kt);
+	return (ns_to_timeval(kt));
 }
 
 static inline ktime_t
@@ -84,7 +84,7 @@ ktime_add_ns(ktime_t kt, int64_t ns)
 	ktime_t res;
 
 	res = kt + ns;
-	return kt;
+	return (kt);
 }
 
 static inline ktime_t
@@ -93,7 +93,7 @@ ktime_sub_ns(ktime_t kt, int64_t ns)
 	ktime_t res;
 
 	res = kt - ns;
-	return kt;
+	return (kt);
 }
 
 static inline ktime_t
@@ -114,14 +114,14 @@ static inline int64_t
 ktime_us_delta(ktime_t later, ktime_t earlier)
 {
         ktime_t diff = ktime_sub(later, earlier);
-        return ktime_to_us(diff);
+        return (ktime_to_us(diff));
 }
 
 static inline int64_t
 ktime_ms_delta(ktime_t later, ktime_t earlier)
 {
         ktime_t diff = ktime_sub(later, earlier);
-        return ktime_to_ms(diff);
+        return (ktime_to_ms(diff));
 }
 
 static inline ktime_t
@@ -203,7 +203,7 @@ ktime_get_raw_ns(void)
 
         nanouptime(&ts);
 
-        return (ts.tv_sec * NSEC_PER_SEC) + ts.tv_nsec;
+        return ((ts.tv_sec * NSEC_PER_SEC) + ts.tv_nsec);
 }
 
 #endif /* _LINUX_KTIME_H */
