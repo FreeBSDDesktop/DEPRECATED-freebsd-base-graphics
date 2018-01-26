@@ -63,16 +63,16 @@ ktime_divns(const ktime_t kt, int64_t div)
 static inline int64_t
 ktime_to_us(ktime_t kt)
 {
-	return (ktime_divns(kt, NSEC_PER_USEC);
+	return (ktime_divns(kt, NSEC_PER_USEC));
 }
 
-st)atic inline int64_t
+static inline int64_t
 ktime_to_ms(ktime_t kt)
 {
-	return (ktime_divns(kt, NSEC_PER_MSEC);
+	return (ktime_divns(kt, NSEC_PER_MSEC));
 }
 
-st)atic inline struct timeval
+static inline struct timeval
 ktime_to_timeval(ktime_t kt)
 {
 	return (ns_to_timeval(kt));
