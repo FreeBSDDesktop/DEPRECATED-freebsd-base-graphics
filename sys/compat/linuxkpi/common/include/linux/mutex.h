@@ -140,7 +140,7 @@ mutex_trylock_recursive(struct mutex *lock)
 	if (unlikely(sx_xholder(&lock->sx) == curthread))
 		return MUTEX_TRYLOCK_RECURSIVE;
 
-	return mutex_trylock(lock);
+	return (mutex_trylock(lock));
 }
 
 #endif /* _LINUX_MUTEX_H_ */
