@@ -52,15 +52,15 @@ enum pid_type {
 })
 
 #define	get_pid_task(pid, type) ({		\
-	struct task_struct *__ts;	        \
+	struct task_struct *__ts;		\
 	CTASSERT((type) == PIDTYPE_PID);	\
 	__ts = linux_get_pid_task(pid);		\
-	__ts;								\
+	__ts;					\
 })
 
 #define	get_task_pid(task, type) ({		\
 	CTASSERT((type) == PIDTYPE_PID);	\
-	curthread->td_proc->p_pid;			\
+	curthread->td_proc->p_pid;		\
 })
 
 struct task_struct;

@@ -99,15 +99,15 @@ extern wait_queue_func_t autoremove_wake_function;
 
 static inline void
 __init_waitqueue_head(wait_queue_head_t *wqh, __unused const void *name,
-					  __unused void *key) {
+    __unused void *key) {
 	mtx_init(&(wqh)->lock.m, spin_lock_name("wqhead"), NULL,
-			 MTX_DEF | MTX_NEW | MTX_NOWITNESS);
+	    MTX_DEF | MTX_NEW | MTX_NOWITNESS);
 	INIT_LIST_HEAD(&(wqh)->task_list);
 }
 
 #define	init_waitqueue_head(wqh) do {		\
 	__init_waitqueue_head(wqh, NULL, NULL); \
-} while (0)
+	} while (0)
 
 void linux_wake_up(wait_queue_head_t *, unsigned int, int, bool);
 
@@ -140,10 +140,8 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
 								\
 	for (;;) {						\
 		linux_prepare_to_wait(&(wqh), &__wq, state);	\
-		if (cond) {					\
-			__ret = 1;				\
+		if (cond)					\
 			break;					\
-		}						\
 		__ret = linux_wait_event_common(&(wqh), &__wq,	\
 		    __timeout, state, lock);			\
 		if (__ret != 0)					\

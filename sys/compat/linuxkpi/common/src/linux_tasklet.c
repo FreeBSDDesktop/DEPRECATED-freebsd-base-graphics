@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD$");
 #define	TASKLET_ST_BUSY 1
 #define	TASKLET_ST_EXEC 2
 #define	TASKLET_ST_LOOP 3
+#define	TASKLET_ST_PAUSED 4
 
 #define	TASKLET_ST_CMPSET(ts, old, new)	\
 	atomic_cmpset_ptr((volatile uintptr_t *)&(ts)->entry.tqe_prev, old, new)
@@ -197,14 +198,20 @@ tasklet_kill(struct tasklet_struct *ts)
 		pause("W", 1);
 }
 
-void tasklet_enable(struct tasklet_struct *ts)
+void
+tasklet_enable(struct tasklet_struct *ts)
 {
-	struct tasklet_worker *tw;
-	tw = &DPCPU_GET(tasklet_worker);
+	(void) TASKLET_ST_CMPSET(ts, TASKLET_ST_PAUSED, TASKLET_ST_IDLE);
 }
 
-void tasklet_disable(struct tasklet_struct *ts)
+void
+tasklet_disable(struct tasklet_struct *ts)
 {
-	struct tasklet_worker *tw;
-	tw = &DPCPU_GET(tasklet_worker);
+	while (1) {
+		if (TASKLET_ST_GET(ts) == TASKLET_ST_PAUSED) 
+			break;
+		if (TASKLET_ST_CMPSET(ts, TASKLET_ST_IDLE, TASKLET_ST_PAUSED))
+			break;
+		pause("W", 1);
+	}
 }

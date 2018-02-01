@@ -78,9 +78,9 @@
 #define	prefetch(x)
 #endif
 
-#define LINUX_LIST_HEAD_INIT(name) { &(name), &(name) }
+#define	LINUX_LIST_HEAD_INIT(name) { &(name), &(name) }
 
-#define LINUX_LIST_HEAD(name) \
+#define	LINUX_LIST_HEAD(name) \
 	struct list_head name = LINUX_LIST_HEAD_INIT(name)
 
 #ifndef LIST_HEAD_DEF
@@ -123,8 +123,6 @@ __list_del(struct list_head *prev, struct list_head *next)
 static inline void
 __list_del_entry(struct list_head *entry)
 {
-	//	if (!__list_del_entry_valid(entry))
-	//	return;
 
 	__list_del(entry->prev, entry->next);
 }
@@ -232,7 +230,7 @@ list_del_init(struct list_head *entry)
 #define	list_for_each_prev(p, h) for (p = (h)->prev; p != (h); p = (p)->prev)
 
 #define list_safe_reset_next(pos, n, member)				\
-	n = list_entry(pos->member.next, typeof(*pos), member)
+	n = list_entry((pos)->member.next, typeof(*pos), member)
 
 static inline void
 list_add(struct list_head *new, struct list_head *head)

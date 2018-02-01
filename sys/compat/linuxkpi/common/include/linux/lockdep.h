@@ -32,6 +32,14 @@
 #ifndef _LINUX_LOCKDEP_H_
 #define	_LINUX_LOCKDEP_H_
 
+/*
+ * In Linux lockdep_* functions are NOOP if CONFIG_LOCKDEP is not enabled.
+ * Since we do not fully support LOCKDEP yet, we do not enable CONFIG_LOCKDEP.
+ * However, for the functions that have implementation below,
+ * #if IS_ENABLED(CONFIG_LOCKDEP) found in Linux code can be overridden to
+ * provide some lock assertion.
+ */
+
 struct lock_class_key {
 };
 
@@ -47,13 +55,12 @@ struct lock_class_key {
 
 #define	lockdep_is_held(m)	(sx_xholder(&(m)->sx) == curthread)
 
-// XXX: experimental (johalun 20170913)
-#define	lock_is_held(m)	lockdep_is_held(m)
-
 #define	might_lock(m)	do { } while (0)
 #define might_lock_read(lock) do { } while (0)
 
 #define lock_acquire(l, s, t, r, c, n, i)	do { } while (0)
 #define lock_release(l, n, i)			do { } while (0)
+#define	lock_acquire_shared_recursive(l, s, t, n, i) \
+    lock_acquire(l, s, t, 2, 1, n, i)
 
 #endif /* _LINUX_LOCKDEP_H_ */

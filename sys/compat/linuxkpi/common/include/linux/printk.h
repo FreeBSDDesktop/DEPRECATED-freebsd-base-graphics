@@ -34,11 +34,12 @@
 #include <linux/kernel.h>
 
 /* GID printing macros */
-#define	GID_PRINT_FMT			"%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x"
-#define	GID_PRINT_ARGS(gid_raw)		htons(((u16 *)gid_raw)[0]), htons(((u16 *)gid_raw)[1]),\
-					htons(((u16 *)gid_raw)[2]), htons(((u16 *)gid_raw)[3]),\
-					htons(((u16 *)gid_raw)[4]), htons(((u16 *)gid_raw)[5]),\
-					htons(((u16 *)gid_raw)[6]), htons(((u16 *)gid_raw)[7])
+#define	GID_PRINT_FMT "%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x"
+#define	GID_PRINT_ARGS(gid_raw)						\
+	htons(((u16 *)gid_raw)[0]), htons(((u16 *)gid_raw)[1]),		\
+	        htons(((u16 *)gid_raw)[2]), htons(((u16 *)gid_raw)[3]),	\
+	        htons(((u16 *)gid_raw)[4]), htons(((u16 *)gid_raw)[5]),	\
+	        htons(((u16 *)gid_raw)[6]), htons(((u16 *)gid_raw)[7])
 
 enum {
 	DUMP_PREFIX_NONE,
@@ -113,10 +114,13 @@ printk_ratelimit() {
 	return (1);
 }
 
-#define	printk_ratelimited(...) do {		\
-	static linux_ratelimit_t __ratelimited;	\
-	if (linux_ratelimited(&__ratelimited))	\
-		printk(__VA_ARGS__);		\
-} while (0)
+#define printk_ratelimited(...) ({			\
+	static linux_ratelimit_t __ratelimited;		\
+	int __retval;					\
+	__retval = linux_ratelimited(&__ratelimited);	\
+	if (__retval)					\
+		printk(__VA_ARGS__);			\
+	__retval;					\
+})
 
 #endif					/* _LINUX_PRINTK_H_ */

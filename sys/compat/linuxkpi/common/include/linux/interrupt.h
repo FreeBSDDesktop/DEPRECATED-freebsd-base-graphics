@@ -125,7 +125,7 @@ enable_irq(unsigned int irq)
 	if (irqe == NULL)
 		return;
 	error = bus_setup_intr(dev->bsddev, irqe->res, INTR_TYPE_NET | INTR_MPSAFE,
-						   NULL, linux_irq_handler, irqe, &irqe->tag);
+		NULL, linux_irq_handler, irqe, &irqe->tag);
 	if (error) {
 		device_printf(dev->bsddev, "linuxkpi enable irq error\n");
 	}

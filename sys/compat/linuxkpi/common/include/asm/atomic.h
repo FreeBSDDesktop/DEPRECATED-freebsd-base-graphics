@@ -159,9 +159,9 @@ atomic_cmpxchg(atomic_t *v, int old, int new)
 	return (ret);
 }
 
-#define	cmpxchg(ptr, old, new) ({		\
+#define	cmpxchg(ptr, old, new) ({					\
 	union {								\
-		__typeof(*(ptr)) val;			\
+		__typeof(*(ptr)) val;					\
 		u8 u8[0];						\
 		u16 u16[0];						\
 		u32 u32[0];						\
@@ -195,7 +195,6 @@ atomic_cmpxchg(atomic_t *v, int old, int new)
 	}								\
 	__ret.val;							\
 })
-
 
 #define	cmpxchg_relaxed(...)	cmpxchg(__VA_ARGS__)
 
