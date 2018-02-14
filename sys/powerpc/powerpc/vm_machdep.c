@@ -167,7 +167,7 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
-	td2->td_md.md_saved_msr = PSL_KERNSET;
+	td2->td_md.md_saved_msr = psl_kernset;
 
 	/*
  	 * Now cpu_switch() can schedule the new process.
@@ -190,6 +190,9 @@ cpu_fork_kthread_handler(struct thread *td, void (*func)(void *), void *arg)
 
 	cf = (struct callframe *)td->td_pcb->pcb_sp;
 
+	#if defined(__powerpc64__) && (!defined(_CALL_ELF) || _CALL_ELF == 1)
+	cf->cf_toc = ((register_t *)func)[1];
+	#endif
 	cf->cf_func = (register_t)func;
 	cf->cf_arg0 = (register_t)arg;
 }

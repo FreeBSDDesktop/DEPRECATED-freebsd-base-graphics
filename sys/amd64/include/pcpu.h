@@ -51,6 +51,7 @@
 	struct	amd64tss *pc_commontssp;/* Common TSS for the CPU */	\
 	uint64_t pc_kcr3;						\
 	uint64_t pc_ucr3;						\
+	uint64_t pc_saved_ucr3;						\
 	register_t pc_rsp0;						\
 	register_t pc_scratch_rsp;	/* User %rsp in syscall */	\
 	register_t pc_scratch_rax;					\
@@ -73,7 +74,8 @@
 	uint32_t pc_pcid_next;						\
 	uint32_t pc_pcid_gen;						\
 	uint32_t pc_smp_tlb_done;	/* TLB op acknowledgement */	\
-	char	__pad[232]		/* be divisor of PAGE_SIZE	\
+	uint32_t pc_ibpb_set;						\
+	char	__pad[216]		/* be divisor of PAGE_SIZE	\
 					   after cache alignment */
 
 #define	PC_DBREG_CMD_NONE	0

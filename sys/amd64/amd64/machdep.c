@@ -115,6 +115,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/cputypes.h>
+#include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <x86/mca.h>
 #include <machine/md_var.h>
@@ -147,6 +148,14 @@ __FBSDID("$FreeBSD$");
 /* Sanity check for __curthread() */
 CTASSERT(offsetof(struct pcpu, pc_curthread) == 0);
 
+/*
+ * The PTI trampoline stack needs enough space for a hardware trapframe and a
+ * couple of scratch registers, as well as the trapframe left behind after an
+ * iret fault.
+ */
+CTASSERT(PC_PTI_STACK_SZ * sizeof(register_t) >= 2 * sizeof(struct pti_frame) -
+    offsetof(struct pti_frame, pti_rip));
+
 extern u_int64_t hammer_time(u_int64_t, u_int64_t);
 
 #define	CS_SECURE(cs)		(ISPL(cs) == SEL_UPL)
@@ -177,12 +186,6 @@ struct init_ops init_ops = {
 #endif
 	.msi_init =			msi_init,
 };
-
-/*
- * The file "conf/ldscript.amd64" defines the symbol "kernphys".  Its value is
- * the physical address at which the kernel is loaded.
- */
-extern char kernphys[];
 
 /*
  * Physical address of the EFI System Table. Stashed from the metadata hints
@@ -279,7 +282,7 @@ cpu_startup(dummy)
 		memsize = (uintmax_t)strtoul(sysenv, (char **)NULL, 10) << 10;
 		freeenv(sysenv);
 	}
-	if (memsize < ptoa((uintmax_t)vm_cnt.v_free_count))
+	if (memsize < ptoa((uintmax_t)vm_free_count()))
 		memsize = ptoa((uintmax_t)Maxmem);
 	printf("real memory  = %ju (%ju MB)\n", memsize, memsize >> 20);
 	realmem = atop(memsize);
@@ -306,8 +309,8 @@ cpu_startup(dummy)
 	vm_ksubmap_init(&kmi);
 
 	printf("avail memory = %ju (%ju MB)\n",
-	    ptoa((uintmax_t)vm_cnt.v_free_count),
-	    ptoa((uintmax_t)vm_cnt.v_free_count) / 1048576);
+	    ptoa((uintmax_t)vm_free_count()),
+	    ptoa((uintmax_t)vm_free_count()) / 1048576);
 
 	/*
 	 * Set up buffers, so they can be used to read disk labels.
@@ -659,7 +662,7 @@ static struct gate_descriptor idt0[NIDT];
 struct gate_descriptor *idt = &idt0[0];	/* interrupt descriptor table */
 
 static char dblfault_stack[PAGE_SIZE] __aligned(16);
-
+static char mce0_stack[PAGE_SIZE] __aligned(16);
 static char nmi0_stack[PAGE_SIZE] __aligned(16);
 CTASSERT(sizeof(struct nmi_pcpu) == 16);
 
@@ -816,7 +819,7 @@ extern inthand_t
 	IDTVEC(div_pti), IDTVEC(dbg_pti), IDTVEC(bpt_pti),
 	IDTVEC(ofl_pti), IDTVEC(bnd_pti), IDTVEC(ill_pti), IDTVEC(dna_pti),
 	IDTVEC(fpusegm_pti), IDTVEC(tss_pti), IDTVEC(missing_pti),
-	IDTVEC(stk_pti), IDTVEC(prot_pti), IDTVEC(page_pti), IDTVEC(mchk_pti),
+	IDTVEC(stk_pti), IDTVEC(prot_pti), IDTVEC(page_pti),
 	IDTVEC(rsvd_pti), IDTVEC(fpu_pti), IDTVEC(align_pti),
 	IDTVEC(xmm_pti),
 #ifdef KDTRACE_HOOKS
@@ -1618,6 +1621,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	mtx_init(&dt_lock, "descriptor tables", NULL, MTX_DEF);
 
 	/* exceptions */
+	pti = pti_get_default();
 	TUNABLE_INT_FETCH("vm.pmap.pti", &pti);
 
 	for (x = 0; x < NIDT; x++)
@@ -1655,8 +1659,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	    SEL_KPL, 0);
 	setidt(IDT_AC, pti ? &IDTVEC(align_pti) : &IDTVEC(align), SDT_SYSIGT,
 	    SEL_KPL, 0);
-	setidt(IDT_MC, pti ? &IDTVEC(mchk_pti) : &IDTVEC(mchk), SDT_SYSIGT,
-	    SEL_KPL, 0);
+	setidt(IDT_MC, &IDTVEC(mchk), SDT_SYSIGT, SEL_KPL, 3);
 	setidt(IDT_XF, pti ? &IDTVEC(xmm_pti) : &IDTVEC(xmm), SDT_SYSIGT,
 	    SEL_KPL, 0);
 #ifdef KDTRACE_HOOKS
@@ -1664,7 +1667,8 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	    &IDTVEC(dtrace_ret), SDT_SYSIGT, SEL_UPL, 0);
 #endif
 #ifdef XENHVM
-	setidt(IDT_EVTCHN, &IDTVEC(xen_intr_upcall), SDT_SYSIGT, SEL_UPL, 0);
+	setidt(IDT_EVTCHN, pti ? &IDTVEC(xen_intr_upcall_pti) :
+	    &IDTVEC(xen_intr_upcall), SDT_SYSIGT, SEL_KPL, 0);
 #endif
 	r_idt.rd_limit = sizeof(idt0) - 1;
 	r_idt.rd_base = (long) idt;
@@ -1701,6 +1705,14 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	np->np_pcpu = (register_t) pc;
 	common_tss[0].tss_ist2 = (long) np;
 
+	/*
+	 * MC# stack, runs on ist3.  The pcpu pointer is stored just
+	 * above the start of the ist3 stack.
+	 */
+	np = ((struct nmi_pcpu *) &mce0_stack[sizeof(mce0_stack)]) - 1;
+	np->np_pcpu = (register_t) pc;
+	common_tss[0].tss_ist3 = (long) np;
+	
 	/* Set the IO permission bitmap (empty due to tss seg limit) */
 	common_tss[0].tss_iobase = sizeof(struct amd64tss) + IOPERM_BITMAP_SIZE;
 
@@ -1813,6 +1825,8 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	x86_init_fdt();
 #endif
 	thread0.td_critnest = 0;
+
+	TUNABLE_INT_FETCH("hw.ibrs_disable", &hw_ibrs_disable);
 
 	TSEXIT();
 
