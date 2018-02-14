@@ -89,7 +89,7 @@ static inline ktime_t
 ktime_sub_ns(ktime_t kt, int64_t ns)
 {
 	kt -= ns;
-	return kt;
+	return (kt);
 }
 
 static inline ktime_t
