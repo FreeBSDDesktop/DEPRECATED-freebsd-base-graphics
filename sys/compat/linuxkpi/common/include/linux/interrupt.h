@@ -111,24 +111,20 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	return (0);
 }
 
-static inline void
+static inline int
 enable_irq(unsigned int irq)
 {
 	struct irq_ent *irqe;
 	struct device *dev;
-	int error;
 
 	dev = linux_pci_find_irq_dev(irq);
 	if (dev == NULL)
-		return;
+		return -EINVAL;
 	irqe = linux_irq_ent(dev, irq);
 	if (irqe == NULL)
-		return;
-	error = bus_setup_intr(dev->bsddev, irqe->res, INTR_TYPE_NET | INTR_MPSAFE,
-		NULL, linux_irq_handler, irqe, &irqe->tag);
-	if (error) {
-		device_printf(dev->bsddev, "linuxkpi enable irq error\n");
-	}
+		return -EINVAL;
+	return -bus_setup_intr(dev->bsddev, irqe->res, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, linux_irq_handler, irqe, &irqe->tag);
 }
 
 static inline void
@@ -205,7 +201,6 @@ extern void tasklet_schedule(struct tasklet_struct *);
 extern void tasklet_kill(struct tasklet_struct *);
 extern void tasklet_init(struct tasklet_struct *, tasklet_func_t *,
     unsigned long data);
-
 extern void tasklet_enable(struct tasklet_struct *);
 extern void tasklet_disable(struct tasklet_struct *);
 

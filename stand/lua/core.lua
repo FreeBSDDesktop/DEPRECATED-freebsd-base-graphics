@@ -28,6 +28,19 @@
 
 local core = {};
 
+-- Commonly appearing constants
+core.KEY_BACKSPACE	= 8;
+core.KEY_ENTER		= 13;
+core.KEY_DELETE		= 127;
+
+core.KEYSTR_ESCAPE	= "\027";
+
+core.MENU_RETURN	= "return";
+core.MENU_ENTRY		= "entry";
+core.MENU_SEPARATOR	= "separator";
+core.MENU_SUBMENU	= "submenu";
+core.MENU_CAROUSEL_ENTRY	= "carousel_entry";
+
 function core.setVerbose(b)
 	if (b == nil) then
 		b = not core.verbose;
@@ -52,6 +65,20 @@ function core.setSingleUser(b)
 		loader.unsetenv("boot_single");
 	end
 	core.su = b;
+end
+
+function core.getACPIPresent(checkingSystemDefaults)
+	local c = loader.getenv("hint.acpi.0.rsdp");
+
+	if (c ~= nil) then
+		if (checkingSystemDefaults == true) then
+			return true;
+		end
+		-- Otherwise, respect disabled if it's set
+		c = loader.getenv("hint.acpi.0.disabled");
+		return (c == nil) or (tonumber(c) ~= 1);
+	end
+	return false;
 end
 
 function core.setACPI(b)
@@ -101,13 +128,13 @@ function core.kernelList()
 
 	local kernels = {};
 	local i = 0;
-	if k ~= nil then
+	if (k ~= nil) then
 		i = i + 1;
 		kernels[i] = k;
 	end
 
 	for n in v:gmatch("([^; ]+)[; ]?") do
-		if n ~= k then
+		if (n ~= k) then
 			i = i + 1;
 			kernels[i] = n;
 		end
@@ -116,7 +143,7 @@ function core.kernelList()
 end
 
 function core.setDefaults()
-	core.setACPI(true);
+	core.setACPI(core.getACPIPresent(true));
 	core.setSafeMode(false);
 	core.setSingleUser(false);
 	core.setVerbose(false);
@@ -133,22 +160,23 @@ end
 function core.bootserial()
 	local c = loader.getenv("console");
 
-	if c ~= nil then
-		if c:find("comconsole") ~= nil then
+	if (c ~= nil) then
+		if (c:find("comconsole") ~= nil) then
 			return true;
 		end
 	end
 
 	local s = loader.getenv("boot_serial");
-	if s ~= nil then
+	if (s ~= nil) then
 		return true;
 	end
 
 	local m = loader.getenv("boot_multicons");
-	if m ~= nil then
+	if (m ~= nil) then
 		return true;
 	end
 	return false;
 end
 
-return core
+core.setACPI(core.getACPIPresent(false));
+return core;

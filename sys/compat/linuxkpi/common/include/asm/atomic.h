@@ -168,8 +168,8 @@ atomic_cmpxchg(atomic_t *v, int old, int new)
 		u64 u64[0];						\
 	} __ret = { .val = (old) }, __new = { .val = (new) };		\
 									\
-	CTASSERT(sizeof(__ret) == 1 || sizeof(__ret) == 2 ||		\
-	    sizeof(__ret) == 4 || sizeof(__ret) == 8);			\
+	CTASSERT(sizeof(__ret.val) == 1 || sizeof(__ret.val) == 2 ||	\
+	    sizeof(__ret.val) == 4 || sizeof(__ret.val) == 8);		\
 									\
 	switch (sizeof(__ret.val)) {					\
 	case 1:								\

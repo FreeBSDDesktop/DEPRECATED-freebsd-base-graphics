@@ -39,57 +39,44 @@ local OnOff;
 local skip;
 local run;
 local autoboot;
+local carousel_choices = {};
 
 --loader menu tree:
 --rooted at menu.welcome
 --submenu declarations:
-local kernel_options;
 local boot_options;
 local welcome;
-
-menu.kernel_options = {
-	-- this table is dynamically appended to when accessed
-	-- return to welcome menu
-	{
-		entry_type = "return",
-		name = function()
-			return "Back to main menu"..color.highlight(" [Backspace]");
-		end,
-		alias = {"\08"}
-	}
-};
 
 menu.boot_options = {
 	-- return to welcome menu
 	{
-		entry_type = "return",
+		entry_type = core.MENU_RETURN,
 		name = function()
 			return "Back to main menu"..color.highlight(" [Backspace]");
-		end,
-		alias = {"\08"}
+		end
 	},
 
 	-- load defaults
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return "Load System "..color.highlight("D").."efaults";
 		end,
 		func = function()
-			core.setDefaults()
+			core.setDefaults();
 		end,
 		alias = {"d", "D"}
 	},
 
 	{
-		entry_type = "separator",
+		entry_type = core.MENU_SEPARATOR,
 		name = function()
 			return "";
 		end
 	},
 
 	{
-		entry_type = "separator",
+		entry_type = core.MENU_SEPARATOR,
 		name = function()
 			return "Boot Options:";
 		end
@@ -97,7 +84,7 @@ menu.boot_options = {
 
 	-- acpi
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return OnOff(color.highlight("A").."CPI       :", core.acpi);
 		end,
@@ -108,7 +95,7 @@ menu.boot_options = {
 	},
 	-- safe mode
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return OnOff("Safe "..color.highlight("M").."ode  :", core.sm);
 		end,
@@ -119,7 +106,7 @@ menu.boot_options = {
 	},
 	-- single user
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return OnOff(color.highlight("S").."ingle user:", core.su);
 		end,
@@ -130,7 +117,7 @@ menu.boot_options = {
 	},
 	-- verbose boot
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return OnOff(color.highlight("V").."erbose    :", core.verbose);
 		end,
@@ -144,7 +131,7 @@ menu.boot_options = {
 menu.welcome = {
 	-- boot multi user
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return color.highlight("B").."oot Multi user "..color.highlight("[Enter]");
 		end,
@@ -152,12 +139,12 @@ menu.welcome = {
 			core.setSingleUser(false);
 			core.boot();
 		end,
-		alias = {"b", "B", "\013"}
+		alias = {"b", "B"}
 	},
 
 	-- boot single user
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return "Boot "..color.highlight("S").."ingle user";
 		end,
@@ -170,16 +157,19 @@ menu.welcome = {
 
 	-- escape to interpreter
 	{
-		entry_type = "return",
+		entry_type = core.MENU_RETURN,
 		name = function()
-			return color.highlight("Esc").."ape to lua interpreter";
+			return color.highlight("Esc").."ape to loader prompt";
 		end,
-		alias = {"\027"}
+		func = function()
+			loader.setenv("autoboot_delay", "NO");
+		end,
+		alias = {core.KEYSTR_ESCAPE}
 	},
 
 	-- reboot
 	{
-		entry_type = "entry",
+		entry_type = core.MENU_ENTRY,
 		name = function()
 			return color.highlight("R").."eboot";
 		end,
@@ -191,14 +181,14 @@ menu.welcome = {
 
 
 	{
-		entry_type = "separator",
+		entry_type = core.MENU_SEPARATOR,
 		name = function()
 			return "";
 		end
 	},
 
 	{
-		entry_type = "separator",
+		entry_type = core.MENU_SEPARATOR,
 		name = function()
 			return "Options:";
 		end
@@ -206,39 +196,40 @@ menu.welcome = {
 
 	-- kernel options
 	{
-		entry_type = "submenu",
-		name = function()
-			local kernels = core.kernelList();
-			if #kernels == 0 then
-				return "Kernels (not available)";
+		entry_type = core.MENU_CAROUSEL_ENTRY,
+		carousel_id = "kernel",
+		items = core.kernelList,
+		name = function(idx, choice, all_choices)
+			if (#all_choices == 0) then
+				return "Kernel: ";
 			end
-			return color.highlight("K").."ernels";
+
+			local is_default = (idx == 1);
+			local kernel_name = "";
+			local name_color;
+			if (is_default) then
+				name_color = color.escapef(color.GREEN);
+				kernel_name = "default/";
+			else
+				name_color = color.escapef(color.BLUE);
+			end
+			kernel_name = kernel_name .. name_color .. choice ..
+			    color.default();
+			return color.highlight("K").."ernel: " .. kernel_name ..
+			    " (" .. idx ..
+			    " of " .. #all_choices .. ")";
 		end,
-		submenu = function()
-
-			-- dynamically build the kernel menu:
-			local kernels = core.kernelList();
-			for k, v in ipairs(kernels) do
-				menu.kernel_options[#menu.kernel_options + 1] = {
-					entry_type = "entry",
-					name = function()
-						return v;
-					end,
-					func = function()
-						config.reload(v);
-					end,
-					alias = {} -- automatically enumerated
-				}
+		func = function(idx, choice, all_choices)
+			if (#all_choices > 1) then
+				config.reload(choice);
 			end
-
-			return menu.kernel_options;
 		end,
 		alias = {"k", "K"}
 	},
 
 	-- boot options
 	{
-		entry_type = "submenu",
+		entry_type = core.MENU_SUBMENU,
 		name = function()
 			return "Boot "..color.highlight("O").."ptions";
 		end,
@@ -249,6 +240,19 @@ menu.welcome = {
 	}
 
 };
+
+-- The first item in every carousel is always the default item.
+function menu.getCarouselIndex(id)
+	local val = carousel_choices[id];
+	if (val == nil) then
+		return 1;
+	end
+	return val;
+end
+
+function menu.setCarouselIndex(id, idx)
+	carousel_choices[id] = idx;
+end
 
 function menu.run(m)
 
@@ -266,12 +270,22 @@ function menu.run(m)
 	screen.defcursor();
 	local alias_table = drawer.drawscreen(m);
 
---	menu.autoboot();
+	menu.autoboot();
 
 	cont = true;
-	while cont do
-		local key = string.char(io.getchar());
+	while (cont) do
+		local key = io.getchar();
 
+		-- Special key behaviors
+		if ((key == core.KEY_BACKSPACE) or (key == core.KEY_DELETE)) and
+		    (m ~= menu.welcome) then
+			break
+		elseif (key == core.KEY_ENTER) then
+			core.boot();
+			-- Should not return
+		end
+
+		key = string.char(key)
 		-- check to see if key is an alias
 		local sel_entry = nil;
 		for k, v in pairs(alias_table) do
@@ -281,14 +295,30 @@ function menu.run(m)
 		end
 
 		-- if we have an alias do the assigned action:
-		if(sel_entry ~= nil) then
-			if (sel_entry.entry_type == "entry") then
+		if (sel_entry ~= nil) then
+			if (sel_entry.entry_type == core.MENU_ENTRY) then
 				-- run function
 				sel_entry.func();
-			elseif (sel_entry.entry_type == "submenu") then
+			elseif (sel_entry.entry_type == core.MENU_CAROUSEL_ENTRY) then
+				-- carousel (rotating) functionality
+				local carid = sel_entry.carousel_id;
+				local caridx = menu.getCarouselIndex(carid);
+				local choices = sel_entry.items();
+
+				if (#choices > 0) then
+					caridx = (caridx % #choices) + 1;
+					menu.setCarouselIndex(carid, caridx);
+					sel_entry.func(caridx, choices[caridx],
+					    choices);
+				end
+			elseif (sel_entry.entry_type == core.MENU_SUBMENU) then
 				-- recurse
 				cont = menu.run(sel_entry.submenu());
-			elseif (sel_entry.entry_type == "return") then
+			elseif (sel_entry.entry_type == core.MENU_RETURN) then
+				-- allow entry to have a function/side effect
+				if (sel_entry.func ~= nil) then
+					sel_entry.func();
+				end
 				-- break recurse
 				cont = false;
 			end
@@ -309,11 +339,11 @@ function menu.run(m)
 end
 
 function menu.skip()
-	if core.bootserial() then
+	if (core.bootserial() )then
 		return true;
 	end
 	local c = string.lower(loader.getenv("console") or "");
-	if (c:match("^efi[ ;]") or c:match("[ ;]efi[ ;]")) ~= nil then
+	if ((c:match("^efi[ ;]") or c:match("[ ;]efi[ ;]")) ~= nil) then
 		return true;
 	end
 
@@ -323,13 +353,15 @@ function menu.skip()
 end
 
 function menu.autoboot()
-	if menu.already_autoboot == true then
+	if (menu.already_autoboot == true) then
 		return;
 	end
 	menu.already_autoboot = true;
 
 	local ab = loader.getenv("autoboot_delay");
-	if ab == "NO" or ab == "no" then
+	if (ab ~= nil) and (ab:lower() == "no") then
+		return;
+	elseif (tonumber(ab) == -1) then
 		core.boot();
 	end
 	ab = tonumber(ab) or 10;
@@ -346,13 +378,11 @@ function menu.autoboot()
 		print("Autoboot in "..time.." seconds, hit [Enter] to boot"
 			      .." or any other key to stop     ");
 		screen.defcursor();
-		if io.ischar() then
+		if (io.ischar()) then
 			local ch = io.getchar();
-			if ch == 13 then
+			if (ch == core.KEY_ENTER) then
 				break;
 			else
-				-- prevent autoboot when escaping to interpreter
-				loader.setenv("autoboot_delay", "NO");
 				-- erase autoboot msg
 				screen.setcursor(0, y);
 				print("                                        "
@@ -376,4 +406,4 @@ function OnOff(str, b)
 	end
 end
 
-return menu
+return menu;
