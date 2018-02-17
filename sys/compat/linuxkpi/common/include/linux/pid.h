@@ -60,7 +60,7 @@ enum pid_type {
 
 #define	get_task_pid(task, type) ({		\
 	CTASSERT((type) == PIDTYPE_PID);	\
-	curthread->td_proc->p_pid;		\
+	(task)->task_thread->td_tid;		\
 })
 
 struct task_struct;
