@@ -208,7 +208,7 @@ void
 tasklet_disable(struct tasklet_struct *ts)
 {
 	while (1) {
-		if (TASKLET_ST_GET(ts) == TASKLET_ST_PAUSED)
+		if (TASKLET_ST_GET(ts) == TASKLET_ST_PAUSED) 
 			break;
 		if (TASKLET_ST_CMPSET(ts, TASKLET_ST_IDLE, TASKLET_ST_PAUSED))
 			break;
