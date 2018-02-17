@@ -55,6 +55,7 @@ kref_init(struct kref *kref)
 static inline unsigned int
 kref_read(const struct kref *kref)
 {
+
 	return (atomic_read(&kref->refcount));
 }
 
@@ -71,9 +72,9 @@ kref_put(struct kref *kref, void (*rel)(struct kref *kref))
 
 	if (refcount_release(&kref->refcount.counter)) {
 		rel(kref);
-		return (1);
+		return 1;
 	}
-	return (0);
+	return 0;
 }
 
 static inline int
@@ -84,17 +85,17 @@ kref_sub(struct kref *kref, unsigned int count,
 	while (count--) {
 		if (refcount_release(&kref->refcount.counter)) {
 			rel(kref);
-			return (1);
+			return 1;
 		}
 	}
-	return (0);
+	return 0;
 }
 
 static inline int __must_check
 kref_get_unless_zero(struct kref *kref)
 {
 
-	return (atomic_add_unless(&kref->refcount, 1, 0));
+	return atomic_add_unless(&kref->refcount, 1, 0);
 }
 
 static inline int kref_put_mutex(struct kref *kref,
@@ -105,12 +106,12 @@ static inline int kref_put_mutex(struct kref *kref,
 		mutex_lock(lock);
 		if (unlikely(!atomic_dec_and_test(&kref->refcount))) {
 			mutex_unlock(lock);
-			return (0);
+			return 0;
 		}
 		release(kref);
-		return (1);
+		return 1;
 	}
-	return (0);
+	return 0;
 }
 
 #endif /* _LINUX_KREF_H_ */

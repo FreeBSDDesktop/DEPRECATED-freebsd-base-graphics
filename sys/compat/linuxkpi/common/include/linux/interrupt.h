@@ -38,7 +38,6 @@
 #include <sys/bus.h>
 #include <sys/rman.h>
 
-
 typedef	irqreturn_t	(*irq_handler_t)(int, void *);
 
 #define	IRQF_SHARED	RF_SHAREABLE
@@ -58,7 +57,7 @@ linux_irq_rid(struct device *dev, unsigned int irq)
 {
 	if (irq == dev->irq)
 		return (0);
-	return (irq - dev->msix + 1);
+	return irq - dev->msix + 1;
 }
 
 extern void linux_irq_handler(void *);
@@ -87,7 +86,7 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 
 	dev = linux_pci_find_irq_dev(irq);
 	if (dev == NULL)
-		return (-ENXIO);
+		return -ENXIO;
 	rid = linux_irq_rid(dev, irq);
 	res = bus_alloc_resource_any(dev->bsddev, SYS_RES_IRQ, &rid,
 	    flags | RF_ACTIVE);
@@ -108,7 +107,7 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	}
 	list_add(&irqe->links, &dev->irqents);
 
-	return (0);
+	return 0;
 }
 
 static inline int
@@ -121,7 +120,7 @@ enable_irq(unsigned int irq)
 	if (dev == NULL)
 		return -EINVAL;
 	irqe = linux_irq_ent(dev, irq);
-	if (irqe == NULL)
+	if (irqe == NULL || irqe->tag != NULL)
 		return -EINVAL;
 	return -bus_setup_intr(dev->bsddev, irqe->res, INTR_TYPE_NET | INTR_MPSAFE,
 	    NULL, linux_irq_handler, irqe, &irqe->tag);
@@ -139,7 +138,8 @@ disable_irq(unsigned int irq)
 	irqe = linux_irq_ent(dev, irq);
 	if (irqe == NULL)
 		return;
-	bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
+	if (irqe->tag != NULL)
+		bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
 	irqe->tag = NULL;
 }
 
@@ -174,7 +174,7 @@ free_irq(unsigned int irq, void *device)
 	irqe = linux_irq_ent(dev, irq);
 	if (irqe == NULL)
 		return;
-	if (irqe->tag)
+	if (irqe->tag != NULL)
 		bus_teardown_intr(dev->bsddev, irqe->res, irqe->tag);
 	bus_release_resource(dev->bsddev, SYS_RES_IRQ, rid, irqe->res);
 	list_del(&irqe->links);
