@@ -34,12 +34,11 @@
 #include <linux/kernel.h>
 
 /* GID printing macros */
-#define	GID_PRINT_FMT "%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x"
-#define	GID_PRINT_ARGS(gid_raw)						\
-	htons(((u16 *)gid_raw)[0]), htons(((u16 *)gid_raw)[1]),		\
-	        htons(((u16 *)gid_raw)[2]), htons(((u16 *)gid_raw)[3]),	\
-	        htons(((u16 *)gid_raw)[4]), htons(((u16 *)gid_raw)[5]),	\
-	        htons(((u16 *)gid_raw)[6]), htons(((u16 *)gid_raw)[7])
+#define	GID_PRINT_FMT			"%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x"
+#define	GID_PRINT_ARGS(gid_raw)		htons(((u16 *)gid_raw)[0]), htons(((u16 *)gid_raw)[1]),\
+					htons(((u16 *)gid_raw)[2]), htons(((u16 *)gid_raw)[3]),\
+					htons(((u16 *)gid_raw)[4]), htons(((u16 *)gid_raw)[5]),\
+					htons(((u16 *)gid_raw)[6]), htons(((u16 *)gid_raw)[7])
 
 enum {
 	DUMP_PREFIX_NONE,
@@ -107,20 +106,16 @@ print_hex_dump_bytes(const char *prefix_str, const int prefix_type,
 	print_hex_dump(NULL, prefix_str, prefix_type, 16, 1, buf, len, 0);
 }
 
-static inline int
-printk_ratelimit() {
-	// XXX: Used in amdgpu/gmc_v{6,7,8}_0.c
-	// Return 0 means no dev_err output.
-	return (1);
-}
+#define	printk_ratelimit() ({			\
+	static linux_ratelimit_t __ratelimited;	\
+	linux_ratelimited(&__ratelimited);	\
+})
 
-#define printk_ratelimited(...) ({			\
-	static linux_ratelimit_t __ratelimited;		\
-	int __retval;					\
-	__retval = linux_ratelimited(&__ratelimited);	\
-	if (__retval)					\
-		printk(__VA_ARGS__);			\
-	__retval;					\
+#define	printk_ratelimited(...) ({		\
+	bool __retval = printk_ratelimit();	\
+	if (__retval)				\
+		printk(__VA_ARGS__);		\
+	__retval;				\
 })
 
 #endif					/* _LINUX_PRINTK_H_ */

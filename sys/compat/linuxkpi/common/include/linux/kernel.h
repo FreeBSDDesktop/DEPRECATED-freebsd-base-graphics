@@ -54,7 +54,7 @@
 
 #include <machine/stdarg.h>
 
-#define	KERN_CONT	""
+#define KERN_CONT       ""
 #define	KERN_EMERG	"<0>"
 #define	KERN_ALERT	"<1>"
 #define	KERN_CRIT	"<2>"
@@ -89,7 +89,7 @@
 #define	BUILD_BUG_ON(x)			CTASSERT(!(x))
 #define	BUILD_BUG_ON_MSG(x, msg)	BUILD_BUG_ON(x)
 #define	BUILD_BUG_ON_NOT_POWER_OF_2(x)	BUILD_BUG_ON(!powerof2(x))
-#define	BUILD_BUG_ON_INVALID(expr) ((void)(sizeof((__force long)(expr))))
+#define	BUILD_BUG_ON_INVALID(expr)	while (0) { (void)(expr); }
 
 #define	BUG()			panic("BUG at %s:%d", __FILE__, __LINE__)
 #define	BUG_ON(cond)		do {				\
