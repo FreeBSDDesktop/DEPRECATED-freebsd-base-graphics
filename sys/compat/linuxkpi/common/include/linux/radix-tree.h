@@ -32,7 +32,6 @@
 #define	_LINUX_RADIX_TREE_H_
 
 #include <linux/types.h>
-#include <linux/bitops.h>
 
 #define	RADIX_TREE_MAP_SHIFT	6
 #define	RADIX_TREE_MAP_SIZE	(1 << RADIX_TREE_MAP_SHIFT)
@@ -40,15 +39,9 @@
 #define	RADIX_TREE_MAX_HEIGHT						\
 	    DIV_ROUND_UP((sizeof(long) * NBBY), RADIX_TREE_MAP_SHIFT)
 
-#define	RADIX_TREE_MAX_TAGS 3
-#define	RADIX_TREE_TAG_LONGS \
-	    ((RADIX_TREE_MAP_SIZE + BITS_PER_LONG - 1) / BITS_PER_LONG)
-
 struct radix_tree_node {
-	unsigned char shift;
-	void *slots[RADIX_TREE_MAP_SIZE];
-	int count;
-	unsigned long tags[RADIX_TREE_MAX_TAGS][RADIX_TREE_TAG_LONGS];
+	void		*slots[RADIX_TREE_MAP_SIZE];
+	int		count;
 };
 
 struct radix_tree_root {
