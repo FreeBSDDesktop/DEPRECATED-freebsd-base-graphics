@@ -119,7 +119,11 @@ struct vm_area_struct {
 struct vm_fault {
 	unsigned int flags;
 	pgoff_t	pgoff;
-	unsigned long address;	/* user-space address */
+	union {
+		/* user-space address */
+		void *virtual_address;
+		unsigned long address;
+	};
 	struct page *page;
 	struct vm_area_struct *vma;
 };
@@ -127,7 +131,7 @@ struct vm_fault {
 struct vm_operations_struct {
 	void    (*open) (struct vm_area_struct *);
 	void    (*close) (struct vm_area_struct *);
-	int     (*fault) (struct vm_fault *);
+	int     (*fault) (struct vm_area_struct *, struct vm_fault *);
 };
 
 /*
@@ -239,7 +243,7 @@ extern long
 get_user_pages_remote(struct task_struct *, struct mm_struct *,
     unsigned long start, unsigned long nr_pages,
     int gup_flags, struct page **,
-	struct vm_area_struct **, int *locked);
+    struct vm_area_struct **);
 
 static inline void
 put_page(struct vm_page *page)

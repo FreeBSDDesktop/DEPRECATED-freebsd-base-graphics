@@ -190,7 +190,7 @@ kobject_add_complete(struct kobject *kobj, struct kobject *parent)
 		}
 		if (error)
 			sysfs_remove_dir(kobj);
-
+		
 	}
 	return (error);
 }
@@ -534,7 +534,7 @@ linux_cdev_pager_populate(vm_object_t vm_obj, vm_pindex_t pidx, int fault_type,
 		struct vm_fault vmf;
 
 		/* fill out VM fault structure */
-		vmf.address = (unsigned long)((uintptr_t)pidx << PAGE_SHIFT);
+		vmf.virtual_address = (void *)((uintptr_t)pidx << PAGE_SHIFT);
 		vmf.flags = (fault_type & VM_PROT_WRITE) ? FAULT_FLAG_WRITE : 0;
 		vmf.pgoff = 0;
 		vmf.page = NULL;
@@ -544,11 +544,11 @@ linux_cdev_pager_populate(vm_object_t vm_obj, vm_pindex_t pidx, int fault_type,
 		vmap->vm_pfn_pcount = &vmap->vm_pfn_count;
 		vmap->vm_obj = vm_obj;
 
-		err = vmap->vm_ops->fault(&vmf);
+		err = vmap->vm_ops->fault(vmap, &vmf);
 
 		while (vmap->vm_pfn_count == 0 && err == VM_FAULT_NOPAGE) {
 			kern_yield(PRI_USER);
-			err = vmap->vm_ops->fault(&vmf);
+			err = vmap->vm_ops->fault(vmap, &vmf);
 		}
 	}
 
@@ -1719,7 +1719,7 @@ mod_timer(struct timer_list *timer, int expires)
 {
 
 	timer->expires = expires;
-	callout_reset(&timer->timer_callout,
+	callout_reset(&timer->timer_callout,		      
 	    linux_timer_jiffies_until(expires),
 	    &linux_timer_callback_wrapper, timer);
 }
