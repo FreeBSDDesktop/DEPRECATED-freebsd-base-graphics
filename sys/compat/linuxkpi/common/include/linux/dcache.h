@@ -25,25 +25,22 @@
  *
  * $FreeBSD$
  */
-#ifndef __LINUX_DCACHE_H
-#define __LINUX_DCACHE_H
 
-struct inode;
-struct dentry;
-struct path;
+#ifndef __LINUX_DCACHE_H
+#define	__LINUX_DCACHE_H
+
+struct vnode;
 struct pfs_node;
 
 struct dentry {
-	struct inode	*d_inode;
-	struct dentry *d_parent;	/* parent directory */
-	/* FreeBSD */
-	struct pfs_node *d_pfs_node;
+	struct vnode *d_inode;
+	struct pfs_node *d_pfs_node;	/* FreeBSD specific field */
 };
 
-
-static inline struct inode *d_inode(const struct dentry *dentry)
+static inline struct vnode *
+d_inode(const struct dentry *dentry)
 {
 	return (dentry->d_inode);
 }
 
-#endif
+#endif /* __LINUX_DCACHE_H */

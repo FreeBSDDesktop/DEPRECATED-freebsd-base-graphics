@@ -215,7 +215,7 @@ static inline int
 register_chrdev_region(dev_t dev, unsigned range, const char *name)
 {
 
-	return (0);
+	return 0;
 }
 
 static inline void
@@ -230,14 +230,14 @@ alloc_chrdev_region(dev_t *dev, unsigned baseminor, unsigned count,
 			const char *name)
 {
 
-	return (0);
+	return 0;
 }
 
 /* No current support for seek op in FreeBSD */
 static inline int
 nonseekable_open(struct inode *inode, struct file *filp)
 {
-	return (0);
+	return 0;
 }
 
 extern unsigned int linux_iminor(struct inode *);
@@ -284,15 +284,17 @@ noop_llseek(struct linux_file *file, loff_t offset, int whence)
 	return (file->_file->f_offset);
 }
 
-static inline struct inode *
-file_inode(const struct file *f)
+static inline struct vnode *
+file_inode(const struct linux_file *file)
 {
-	return (f->f_inode);
+
+	return (file->f_vnode);
 }
 
 static inline int
-call_mmap(struct file *file, struct vm_area_struct *vma)
+call_mmap(struct linux_file *file, struct vm_area_struct *vma)
 {
+
 	return (file->f_op->mmap(file, vma));
 }
 
