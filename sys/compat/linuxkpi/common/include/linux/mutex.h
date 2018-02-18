@@ -143,4 +143,4 @@ linux_mutex_destroy(mutex_t *m)
 	sx_destroy(&m->sx);
 }
 
-#endif /* _LINUX_MUTEX_H_ */
+#endif					/* _LINUX_MUTEX_H_ */

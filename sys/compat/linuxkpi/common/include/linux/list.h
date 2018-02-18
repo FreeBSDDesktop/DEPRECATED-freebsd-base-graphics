@@ -70,17 +70,13 @@
 #include <vm/vm_object.h>
 #include <vm/pmap.h>
 
-#ifdef DDB
-#include <ddb/ddb.h>
-#endif
-
 #ifndef prefetch
 #define	prefetch(x)
 #endif
 
-#define	LINUX_LIST_HEAD_INIT(name) { &(name), &(name) }
+#define LINUX_LIST_HEAD_INIT(name) { &(name), &(name) }
 
-#define	LINUX_LIST_HEAD(name) \
+#define LINUX_LIST_HEAD(name) \
 	struct list_head name = LINUX_LIST_HEAD_INIT(name)
 
 #ifndef LIST_HEAD_DEF
@@ -228,9 +224,6 @@ list_del_init(struct list_head *entry)
 	    p = list_entry((p)->field.prev, typeof(*p), field))
 
 #define	list_for_each_prev(p, h) for (p = (h)->prev; p != (h); p = (p)->prev)
-
-#define list_safe_reset_next(pos, n, member)				\
-	n = list_entry((pos)->member.next, typeof(*pos), member)
 
 static inline void
 list_add(struct list_head *new, struct list_head *head)
