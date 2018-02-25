@@ -74,6 +74,7 @@ SUBDIR=	\
 	bwi \
 	bwn \
 	${_bytgpio} \
+	${_chvgpio} \
 	cam \
 	${_cardbus} \
 	${_carp} \
@@ -360,7 +361,7 @@ SUBDIR=	\
 	snp \
 	sound \
 	${_speaker} \
-	spigen \
+	spi \
 	${_splash} \
 	${_sppp} \
 	ste \
@@ -636,6 +637,7 @@ _amdtemp=	amdtemp
 _arcmsr=	arcmsr
 _asmc=		asmc
 _bytgpio=	bytgpio
+_chvgpio=	chvgpio
 _ciss=		ciss
 _chromebook_platform=	chromebook_platform
 _cmx=		cmx

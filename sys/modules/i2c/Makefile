@@ -14,10 +14,15 @@ SUBDIR = \
 	iicsmb \
 	isl \
 	isl12xx \
+	jedec_dimm \
 	jedec_ts \
 	nxprtc \
 	s35390a \
 	smb \
 	smbus \
+
+.if !empty(OPT_FDT)
+SUBDIR += ofw_iicbus
+.endif
 
 .include <bsd.subdir.mk>

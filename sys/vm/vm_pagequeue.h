@@ -73,6 +73,8 @@ struct vm_pagequeue {
 	const char	* const pq_name;
 } __aligned(CACHE_LINE_SIZE);
 
+#include <sys/pidctrl.h>
+struct sysctl_oid;
 
 struct vm_domain {
 	struct vm_pagequeue vmd_pagequeues[PQ_COUNT];
@@ -83,6 +85,7 @@ struct vm_domain {
 	long vmd_segs;			/* bitmask of the segments */
 
 	/* Paging control variables, locked by domain_free_mtx. */
+	struct pidctrl vmd_pid;		/* Pageout controller. */
 	u_int vmd_free_count;
 	boolean_t vmd_oom;
 	int vmd_oom_seq;
@@ -93,8 +96,6 @@ struct vm_domain {
 
 	int vmd_pageout_pages_needed;	/* page daemon waiting for pages? */
 	int vmd_pageout_deficit;	/* Estimated number of pages deficit */
-	int vmd_waiters;		/* Pageout waiters. */
-	bool vmd_pages_needed;	/* Are threads waiting for free pages? */
 	bool vmd_pageout_wanted;	/* pageout daemon wait channel */
 	bool vmd_minset;		/* Are we in vm_min_domains? */
 	bool vmd_severeset;		/* Are we in vm_severe_domains? */
@@ -115,6 +116,10 @@ struct vm_domain {
 	u_int vmd_pageout_wakeup_thresh;/* (c) min pages to wake pagedaemon */
 	u_int vmd_interrupt_free_min;	/* (c) reserved pages for int code */
 	u_int vmd_free_severe;		/* (c) severe page depletion point */
+
+	/* Name for sysctl etc. */
+	struct sysctl_oid *vmd_oid;
+	char vmd_name[sizeof(__XSTRING(MAXMEMDOM))];
 } __aligned(CACHE_LINE_SIZE);
 
 extern struct vm_domain vm_dom[MAXMEMDOM];

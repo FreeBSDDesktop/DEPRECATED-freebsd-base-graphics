@@ -424,6 +424,17 @@ exit1(struct thread *td, int rval, int signo)
 	tidhash_remove(td);
 
 	/*
+	 * Call machine-dependent code to release any
+	 * machine-dependent resources other than the address space.
+	 * The address space is released by "vmspace_exitfree(p)" in
+	 * vm_waitproc().
+	 */
+	cpu_exit(td);
+
+	WITNESS_WARN(WARN_PANIC, NULL, "process (pid %d) exiting", p->p_pid);
+
+	sx_xlock(&proctree_lock);
+	/*
 	 * Remove proc from allproc queue and pidhash chain.
 	 * Place onto zombproc.  Unlink from parent's child list.
 	 */
@@ -434,21 +445,10 @@ exit1(struct thread *td, int rval, int signo)
 	sx_xunlock(&allproc_lock);
 
 	/*
-	 * Call machine-dependent code to release any
-	 * machine-dependent resources other than the address space.
-	 * The address space is released by "vmspace_exitfree(p)" in
-	 * vm_waitproc().
-	 */
-	cpu_exit(td);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "process (pid %d) exiting", p->p_pid);
-
-	/*
 	 * Reparent all children processes:
 	 * - traced ones to the original parent (or init if we are that parent)
 	 * - the rest to init
 	 */
-	sx_xlock(&proctree_lock);
 	q = LIST_FIRST(&p->p_children);
 	if (q != NULL)		/* only need this if any child is S_ZOMB */
 		wakeup(q->p_reaper);
@@ -819,6 +819,8 @@ proc_reap(struct thread *td, struct proc *p, int *status, int options)
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	KASSERT(p->p_state == PRS_ZOMBIE, ("proc_reap: !PRS_ZOMBIE"));
 
+	mtx_spin_wait_unlocked(&p->p_slock);
+
 	q = td->td_proc;
 
 	if (status)
@@ -1174,6 +1176,7 @@ kern_wait6(struct thread *td, idtype_t idtype, id_t id, int *status,
 	struct proc *p, *q;
 	pid_t pid;
 	int error, nfound, ret;
+	bool report;
 
 	AUDIT_ARG_VALUE((int)idtype);	/* XXX - This is likely wrong! */
 	AUDIT_ARG_PID((pid_t)id);	/* XXX - This may be wrong! */
@@ -1225,36 +1228,38 @@ loop_locked:
 		nfound++;
 		PROC_LOCK_ASSERT(p, MA_OWNED);
 
-		if ((options & (WTRAPPED | WUNTRACED)) != 0)
-			PROC_SLOCK(p);
-
 		if ((options & WTRAPPED) != 0 &&
-		    (p->p_flag & P_TRACED) != 0 &&
-		    (p->p_flag & (P_STOPPED_TRACE | P_STOPPED_SIG)) != 0 &&
-		    p->p_suspcount == p->p_numthreads &&
-		    (p->p_flag & P_WAITED) == 0) {
+		    (p->p_flag & P_TRACED) != 0) {
+			PROC_SLOCK(p);
+			report =
+			    ((p->p_flag & (P_STOPPED_TRACE | P_STOPPED_SIG)) &&
+			    p->p_suspcount == p->p_numthreads &&
+			    (p->p_flag & P_WAITED) == 0);
 			PROC_SUNLOCK(p);
+			if (report) {
 			CTR4(KTR_PTRACE,
 			    "wait: returning trapped pid %d status %#x "
 			    "(xstat %d) xthread %d",
 			    p->p_pid, W_STOPCODE(p->p_xsig), p->p_xsig,
 			    p->p_xthread != NULL ?
 			    p->p_xthread->td_tid : -1);
-			report_alive_proc(td, p, siginfo, status, options,
-			    CLD_TRAPPED);
-			return (0);
+				report_alive_proc(td, p, siginfo, status,
+				    options, CLD_TRAPPED);
+				return (0);
+			}
 		}
 		if ((options & WUNTRACED) != 0 &&
-		    (p->p_flag & P_STOPPED_SIG) != 0 &&
-		    p->p_suspcount == p->p_numthreads &&
-		    (p->p_flag & P_WAITED) == 0) {
+		    (p->p_flag & P_STOPPED_SIG) != 0) {
+			PROC_SLOCK(p);
+			report = (p->p_suspcount == p->p_numthreads &&
+			    ((p->p_flag & P_WAITED) == 0));
 			PROC_SUNLOCK(p);
-			report_alive_proc(td, p, siginfo, status, options,
-			    CLD_STOPPED);
-			return (0);
+			if (report) {
+				report_alive_proc(td, p, siginfo, status,
+				    options, CLD_STOPPED);
+				return (0);
+			}
 		}
-		if ((options & (WTRAPPED | WUNTRACED)) != 0)
-			PROC_SUNLOCK(p);
 		if ((options & WCONTINUED) != 0 &&
 		    (p->p_flag & P_CONTINUED) != 0) {
 			report_alive_proc(td, p, siginfo, status, options,
