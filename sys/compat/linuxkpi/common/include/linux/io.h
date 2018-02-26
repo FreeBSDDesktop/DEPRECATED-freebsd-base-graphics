@@ -67,6 +67,8 @@ __raw_writeq(uint64_t b, volatile void *addr)
  */
 #define	mmiowb()	barrier()
 
+#define	writel_relaxed	writel
+
 #undef writel
 static inline void
 writel(uint32_t b, void *addr)

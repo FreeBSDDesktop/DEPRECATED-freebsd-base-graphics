@@ -125,6 +125,14 @@
 #define	MODULE_PARM_DESC(name, desc) \
 	const char LINUXKPI_PARAM_DESC(name)[] = { desc }
 
+struct module;
+static inline void kernel_param_lock(struct module *mod)
+{
+}
+static inline void kernel_param_unlock(struct module *mod)
+{
+}
+
 SYSCTL_DECL(_compat_linuxkpi);
 
 #endif					/* _LINUX_MODULEPARAM_H_ */

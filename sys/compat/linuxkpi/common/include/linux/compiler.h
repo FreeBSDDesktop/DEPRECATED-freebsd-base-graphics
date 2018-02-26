@@ -65,12 +65,14 @@
 #undef __always_inline
 #define	__always_inline			inline
 #define	____cacheline_aligned		__aligned(CACHE_LINE_SIZE)
+#define noinline
 
 #define	likely(x)			__builtin_expect(!!(x), 1)
 #define	unlikely(x)			__builtin_expect(!!(x), 0)
 #define typeof(x)			__typeof(x)
 
 #define	uninitialized_var(x)		x = x
+#define	__maybe_unused			__unused
 #define	__always_unused			__unused
 #define	__must_check			__result_use_check
 
