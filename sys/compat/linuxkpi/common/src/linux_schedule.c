@@ -195,6 +195,25 @@ linux_prepare_to_wait(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
 	spin_unlock(&wqh->lock);
 }
 
+long
+linux_prepare_to_wait_event(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
+{
+	long ret = 0;
+
+	spin_lock(&wqh->lock);
+	if (unlikely(signal_pending_state(state, current))) {
+		list_del_init(&wq->task_list);
+		ret = -ERESTARTSYS;
+	} else {
+		if (list_empty(&wq->task_list))
+			__add_wait_queue(wqh, wq);
+		set_current_state(state);
+	}
+	spin_unlock(&wqh->lock);
+
+	return ret;
+}
+
 void
 linux_finish_wait(wait_queue_head_t *wqh, wait_queue_t *wq)
 {
