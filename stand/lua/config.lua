@@ -30,10 +30,23 @@
 --
 
 local config = {}
-
 local modules = {}
-
 local carousel_choices = {}
+
+local MSG_FAILEXEC = "Failed to exec '%s'"
+local MSG_FAILSETENV = "Failed to '%s' with value: %s"
+local MSG_FAILOPENCFG = "Failed to open config: '%s'"
+local MSG_FAILREADCFG = "Failed to read config: '%s'"
+local MSG_FAILPARSECFG = "Failed to parse config: '%s'"
+local MSG_FAILEXBEF = "Failed to execute '%s' before loading '%s'"
+local MSG_FAILEXMOD = "Failed to execute '%s'"
+local MSG_FAILEXAF = "Failed to execute '%s' after loading '%s'"
+local MSG_MALFORMED = "Malformed line (%d):\n\t'%s'"
+local MSG_DEFAULTKERNFAIL = "No kernel set, failed to load from module_path"
+local MSG_KERNFAIL = "Failed to load kernel '%s'"
+local MSG_KERNLOADING = "Loading kernel..."
+local MSG_MODLOADING = "Loading configured modules..."
+local MSG_MODLOADFAIL = "Could not load one or more modules!"
 
 local pattern_table = {
 	{
@@ -97,7 +110,7 @@ local pattern_table = {
 		str = "^%s*exec%s*=%s*\"([%w%s%p]-)\"%s*(.*)",
 		process = function(k, _)
 			if loader.perform(k) ~= 0 then
-				print("Failed to exec '" .. k .. "'")
+				print(MSG_FAILEXEC:format(k))
 			end
 		end,
 	},
@@ -106,8 +119,7 @@ local pattern_table = {
 		str = "^%s*([%w%p]+)%s*=%s*\"([%w%s%p]-)\"%s*(.*)",
 		process = function(k, v)
 			if config.setenv(k, v) ~= 0 then
-				print("Failed to set '" .. k ..
-				    "' with value: " .. v .. "")
+				print(MSG_FAILSETENV:format(k, v))
 			end
 		end,
 	},
@@ -116,8 +128,7 @@ local pattern_table = {
 		str = "^%s*([%w%p]+)%s*=%s*(%d+)%s*(.*)",
 		process = function(k, v)
 			if config.setenv(k, v) ~= 0 then
-				print("Failed to set '" .. k ..
-				    "' with value: " .. v .. "")
+				print(MSG_FAILSETENV:format(k, tostring(v)))
 			end
 		end,
 	},
@@ -127,7 +138,7 @@ local function readFile(name, silent)
 	local f = io.open(name)
 	if f == nil then
 		if not silent then
-			print("Failed to open config: '" .. name .. "'")
+			print(MSG_FAILOPENCFG:format(name))
 		end
 		return nil
 	end
@@ -138,7 +149,7 @@ local function readFile(name, silent)
 
 	if text == nil then
 		if not silent then
-			print("Failed to read config: '" .. name .. "'")
+			print(MSG_FAILREADCFG:format(name))
 		end
 		return nil
 	end
@@ -162,8 +173,7 @@ local function checkNextboot()
 	end
 
 	if not config.parse(text) then
-		print("Failed to parse nextboot configuration: '" ..
-		    nextboot_file .. "'")
+		print(MSG_FAILPARSECFG:format(nextboot_file))
 	end
 
 	-- Attempt to rewrite the first line and only the first line of the
@@ -228,38 +238,32 @@ function config.restoreEnv()
 	config.env_restore = {}
 end
 
-function config.setenv(k, v)
+function config.setenv(key, value)
 	-- Track the original value for this if we haven't already
-	if config.env_restore[k] == nil then
-		config.env_restore[k] = {value = loader.getenv(k)}
+	if config.env_restore[key] == nil then
+		config.env_restore[key] = {value = loader.getenv(key)}
 	end
 
-	config.env_changed[k] = v
+	config.env_changed[key] = value
 
-	return loader.setenv(k, v)
+	return loader.setenv(key, value)
 end
 
-function config.setKey(k, n, v)
-	if modules[k] == nil then
-		modules[k] = {}
+-- name here is one of 'name', 'type', flags', 'before', 'after', or 'error.'
+-- These are set from lines in loader.conf(5): ${key}_${name}="${value}" where
+-- ${key} is a module name.
+function config.setKey(key, name, value)
+	if modules[key] == nil then
+		modules[key] = {}
 	end
-	modules[k][n] = v
+	modules[key][name] = value
 end
 
-function config.lsModules()
-	print("== Listing modules")
-	for k, v in pairs(modules) do
-		print(k, v.load)
-	end
-	print("== List of modules ended")
-end
-
-
-function config.isValidComment(c)
-	if c ~= nil then
-		local s = c:match("^%s*#.*")
+function config.isValidComment(line)
+	if line ~= nil then
+		local s = line:match("^%s*#.*")
 		if s == nil then
-			s = c:match("^%s*$")
+			s = line:match("^%s*$")
 		end
 		if s == nil then
 			return false
@@ -270,6 +274,7 @@ end
 
 function config.loadmod(mod, silent)
 	local status = true
+	local pstatus
 	for k, v in pairs(mod) do
 		if v.load == "YES" then
 			local str = "load "
@@ -284,23 +289,17 @@ function config.loadmod(mod, silent)
 			else
 				str = str .. k
 			end
-
 			if v.before ~= nil then
-				if loader.perform(v.before) ~= 0 then
-					if not silent then
-						print("Failed to execute '" ..
-						    v.before ..
-						    "' before loading '" .. k ..
-						    "'")
-					end
-					status = false
+				pstatus = loader.perform(v.before) == 0
+				if not pstatus and not silent then
+					print(MSG_FAILEXBEF:format(v.before, k))
 				end
+				status = status and pstatus
 			end
 
 			if loader.perform(str) ~= 0 then
 				if not silent then
-					print("Failed to execute '" .. str ..
-					    "'")
+					print(MSG_FAILEXMOD:format(str))
 				end
 				if v.error ~= nil then
 					loader.perform(v.error)
@@ -309,15 +308,11 @@ function config.loadmod(mod, silent)
 			end
 
 			if v.after ~= nil then
-				if loader.perform(v.after) ~= 0 then
-					if not silent then
-						print("Failed to execute '" ..
-						    v.after ..
-						    "' after loading '" .. k ..
-						    "'")
-					end
-					status = false
+				pstatus = loader.perform(v.after) == 0
+				if not pstatus and not silent then
+					print(MSG_FAILEXAF:format(v.after, k))
 				end
+				status = status and pstatus
 			end
 
 --		else
@@ -330,6 +325,9 @@ function config.loadmod(mod, silent)
 	return status
 end
 
+-- Returns true if we processed the file successfully, false if we did not.
+-- If 'silent' is true, being unable to read the file is not considered a
+-- failure.
 function config.processFile(name, silent)
 	if silent == nil then
 		silent = false
@@ -337,15 +335,13 @@ function config.processFile(name, silent)
 
 	local text = readFile(name, silent)
 	if text == nil then
-		return not silent
+		return silent
 	end
 
 	return config.parse(text)
 end
 
 -- silent runs will not return false if we fail to open the file
--- check_and_halt, if it's set, will be executed on the full text of the config
--- file. If it returns false, we are to halt immediately.
 function config.parse(text)
 	local n = 1
 	local status = true
@@ -362,8 +358,8 @@ function config.parse(text)
 					if config.isValidComment(c) then
 						val.process(k, v)
 					else
-						print("Malformed line (" .. n ..
-						    "):\n\t'" .. line .. "'")
+						print(MSG_MALFORMED:format(n,
+						    line))
 						status = false
 					end
 
@@ -372,8 +368,7 @@ function config.parse(text)
 			end
 
 			if not found then
-				print("Malformed line (" .. n .. "):\n\t'" ..
-				    line .. "'")
+				print(MSG_MALFORMED:format(n, line))
 				status = false
 			end
 		end
@@ -422,7 +417,7 @@ function config.loadKernel(other_kernel)
 			config.kernel_loaded = nil
 			return true
 		else
-			print("No kernel set, failed to load from module_path")
+			print(MSG_DEFAULTKERNFAIL)
 			return false
 		end
 	else
@@ -460,7 +455,7 @@ function config.loadKernel(other_kernel)
 			config.kernel_loaded = kernel
 			return true
 		else
-			print("Failed to load kernel '" .. kernel .. "'")
+			print(MSG_KERNFAIL:format(kernel))
 			return false
 		end
 	end
@@ -476,7 +471,7 @@ function config.load(file)
 	end
 
 	if not config.processFile(file) then
-		print("Failed to parse configuration: '" .. file .. "'")
+		print(MSG_FAILPARSECFG:format(file))
 	end
 
 	local f = loader.getenv("loader_conf_files")
@@ -486,8 +481,7 @@ function config.load(file)
 			-- silent parse so that we complain on parse errors but
 			-- not for them simply not existing.
 			if not config.processFile(name, true) then
-				print("Failed to parse configuration: '" ..
-				    name .. "'")
+				print(MSG_FAILPARSECFG:format(name))
 			end
 		end
 	end
@@ -509,17 +503,16 @@ function config.loadelf()
 	local kernel = config.kernel_selected or config.kernel_loaded
 	local loaded
 
-	print("Loading kernel...")
+	print(MSG_KERNLOADING)
 	loaded = config.loadKernel(kernel)
 
 	if not loaded then
-		print("Failed to load any kernel")
 		return
 	end
 
-	print("Loading configured modules...")
+	print(MSG_MODLOADING)
 	if not config.loadmod(modules) then
-		print("Could not load one or more modules!")
+		print(MSG_MODLOADFAIL)
 	end
 end
 

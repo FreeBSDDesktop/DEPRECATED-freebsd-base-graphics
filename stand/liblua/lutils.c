@@ -77,6 +77,25 @@ lua_perform(lua_State *L)
 	return 1;
 }
 
+/*
+ * Accepts a space-delimited loader command and runs it through the standard
+ * loader parsing, as if it were executed at the loader prompt by the user.
+ */
+static int
+lua_interpret(lua_State *L)
+{
+	const char	*interp_string;
+
+	if (lua_gettop(L) != 1) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	interp_string = luaL_checkstring(L, 1);
+	lua_pushinteger(L, interp_run(interp_string));
+	return 1;
+}
+
 static int
 lua_getchar(lua_State *L)
 {
@@ -153,13 +172,13 @@ lua_unsetenv(lua_State *L)
 static int
 lua_printc(lua_State *L)
 {
-	int status;
-	ssize_t l;
+	ssize_t cur, l;
 	const char *s = luaL_checklstring(L, 1, &l);
 
-	status = (printf("%s", s) == l);
+	for (cur = 0; cur < l; ++cur)
+		putchar((unsigned char)*(s++));
 
-	return status;
+	return 1;
 }
 
 static int
@@ -305,8 +324,10 @@ lua_writefile(lua_State *L)
 static const struct luaL_Reg loaderlib[] = {
 	REG_SIMPLE(delay),
 	REG_SIMPLE(command),
+	REG_SIMPLE(interpret),
 	REG_SIMPLE(getenv),
 	REG_SIMPLE(perform),
+	/* Also registered as the global 'printc' */
 	REG_SIMPLE(printc),
 	REG_SIMPLE(setenv),
 	REG_SIMPLE(time),
@@ -335,6 +356,8 @@ luaopen_loader(lua_State *L)
 	lua_setfield(L, -2, "machine");
 	lua_pushstring(L, MACHINE_ARCH);
 	lua_setfield(L, -2, "machine_arch");
+	/* Set global printc to loader.printc */
+	lua_register(L, "printc", lua_printc);
 	return 1;
 }
 

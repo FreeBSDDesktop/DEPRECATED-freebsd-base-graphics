@@ -38,10 +38,14 @@ local drawer = require("drawer")
 
 local menu = {}
 
-local screen_invalid = true
+local drawn_menu
+local return_menu_entry = {
+	entry_type = core.MENU_RETURN,
+	name = "Back to main menu" .. color.highlight(" [Backspace]"),
+}
 
-local function OnOff(str, b)
-	if b then
+local function OnOff(str, value)
+	if value then
 		return str .. color.escapef(color.GREEN) .. "On" ..
 		    color.escapef(color.WHITE)
 	else
@@ -82,7 +86,6 @@ menu.handlers = {
 		end
 	end,
 	[core.MENU_SUBMENU] = function(_, entry)
-		screen_invalid = true
 		menu.process(entry.submenu)
 	end,
 	[core.MENU_RETURN] = function(_, entry)
@@ -98,11 +101,7 @@ menu.handlers = {
 menu.boot_environments = {
 	entries = {
 		-- return to welcome menu
-		{
-			entry_type = core.MENU_RETURN,
-			name = "Back to main menu" ..
-			    color.highlight(" [Backspace]"),
-		},
+		return_menu_entry,
 		{
 			entry_type = core.MENU_CAROUSEL_ENTRY,
 			carousel_id = "be_active",
@@ -150,11 +149,7 @@ menu.boot_environments = {
 menu.boot_options = {
 	entries = {
 		-- return to welcome menu
-		{
-			entry_type = core.MENU_RETURN,
-			name = "Back to main menu" ..
-			    color.highlight(" [Backspace]"),
-		},
+		return_menu_entry,
 		-- load defaults
 		{
 			entry_type = core.MENU_ENTRY,
@@ -348,23 +343,21 @@ menu.default = menu.welcome
 -- the local alias_table in menu.process.
 menu.current_alias_table = {}
 
-function menu.redraw(m)
-	-- redraw screen
+function menu.draw(menudef)
+	-- Clear the screen, reset the cursor, then draw
 	screen.clear()
+	menu.current_alias_table = drawer.drawscreen(menudef)
+	drawn_menu = menudef
 	screen.defcursor()
-	menu.current_alias_table = drawer.drawscreen(m)
-	screen_invalid = false
 end
 
 -- 'keypress' allows the caller to indicate that a key has been pressed that we
 -- should process as our initial input.
-function menu.process(m, keypress)
-	assert(m ~= nil)
+function menu.process(menudef, keypress)
+	assert(menudef ~= nil)
 
-	-- Trigger a redraw if we've been invalidated.  Otherwise, we assume
-	-- that this menu has already been drawn.
-	if screen_invalid then
-		menu.redraw(m)
+	if drawn_menu ~= menudef then
+		menu.draw(menudef)
 	end
 
 	while true do
@@ -373,7 +366,7 @@ function menu.process(m, keypress)
 
 		-- Special key behaviors
 		if (key == core.KEY_BACKSPACE or key == core.KEY_DELETE) and
-		    m ~= menu.default then
+		    menudef ~= menu.default then
 			break
 		elseif key == core.KEY_ENTER then
 			core.boot()
@@ -392,50 +385,30 @@ function menu.process(m, keypress)
 
 		-- if we have an alias do the assigned action:
 		if sel_entry ~= nil then
-			-- Get menu handler
 			local handler = menu.handlers[sel_entry.entry_type]
-			if handler ~= nil then
-				-- The handler's return value indicates if we
-				-- need to exit this menu.  An omitted or true
-				-- return value means to continue.
-				if handler(m, sel_entry) == false then
-					return
-				end
+			assert(handler ~= nil)
+			-- The handler's return value indicates if we
+			-- need to exit this menu.  An omitted or true
+			-- return value means to continue.
+			if handler(menudef, sel_entry) == false then
+				return
 			end
 			-- If we got an alias key the screen is out of date...
 			-- redraw it.
-			menu.redraw(m)
+			menu.draw(menudef)
 		end
 	end
 end
 
 function menu.run()
-	if menu.skip() then
-		core.autoboot()
-		return
-	end
-
-	menu.redraw(menu.default)
+	menu.draw(menu.default)
 	local autoboot_key = menu.autoboot()
 
 	menu.process(menu.default, autoboot_key)
+	drawn_menu = nil
 
 	screen.defcursor()
 	print("Exiting menu!")
-end
-
-function menu.skip()
-	if core.isSerialBoot() then
-		return true
-	end
-	local c = string.lower(loader.getenv("console") or "")
-	if c:match("^efi[ ;]") ~= nil or c:match("[ ;]efi[ ;]") ~= nil then
-		return true
-	end
-
-	c = string.lower(loader.getenv("beastie_disable") or "")
-	print("beastie_disable", c)
-	return c == "yes"
 end
 
 function menu.autoboot()
@@ -447,8 +420,8 @@ function menu.autoboot()
 	end
 	ab = tonumber(ab) or 10
 
-	local x = loader.getenv("loader_menu_timeout_x") or 5
-	local y = loader.getenv("loader_menu_timeout_y") or 22
+	local x = loader.getenv("loader_menu_timeout_x") or 4
+	local y = loader.getenv("loader_menu_timeout_y") or 23
 
 	local endtime = loader.time() + ab
 	local time
@@ -475,8 +448,9 @@ function menu.autoboot()
 
 		loader.delay(50000)
 	until time <= 0
-	core.boot()
 
+	local cmd = loader.getenv("menu_timeout_command") or "boot"
+	loader.interpret(cmd)
 end
 
 return menu
