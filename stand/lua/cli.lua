@@ -38,7 +38,7 @@ local cli = {}
 -- Defaults to nil and "" respectively.
 -- This will also parse arguments to autoboot, but the with_kernel argument
 -- will need to be explicitly overwritten to false
-local function parse_boot_args(argv, with_kernel)
+local function parseBootArgs(argv, with_kernel)
 	if with_kernel == nil then
 		with_kernel = true
 	end
@@ -69,6 +69,10 @@ end
 -- Declares a global function cli_execute that attempts to dispatch the
 -- arguments passed as a lua function. This gives lua a chance to intercept
 -- builtin CLI commands like "boot"
+-- This function intentionally does not follow our general naming guideline for
+-- functions. This is global pollution, but the clearly separated 'cli' looks
+-- more like a module indicator to serve as a hint of where to look for the
+-- corresponding definition.
 function cli_execute(...)
 	local argv = {...}
 	-- Just in case...
@@ -95,17 +99,17 @@ end
 
 function cli.boot(...)
 	local _, argv = cli.arguments(...)
-	local kernel, argstr = parse_boot_args(argv)
+	local kernel, argstr = parseBootArgs(argv)
 	if kernel ~= nil then
 		loader.perform("unload")
-		config.selectkernel(kernel)
+		config.selectKernel(kernel)
 	end
 	core.boot(argstr)
 end
 
 function cli.autoboot(...)
 	local _, argv = cli.arguments(...)
-	local argstr = parse_boot_args(argv, false)
+	local argstr = parseBootArgs(argv, false)
 	core.autoboot(argstr)
 end
 

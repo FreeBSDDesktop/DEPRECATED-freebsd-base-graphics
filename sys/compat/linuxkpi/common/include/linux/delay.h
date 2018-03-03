@@ -33,27 +33,22 @@
 #define	_LINUX_DELAY_H_
 
 #include <linux/jiffies.h>
-#include <linux/sched.h>
 #include <sys/systm.h>
 
 static inline void
-linux_msleep(int ms)
+linux_msleep(unsigned int ms)
 {
-	pause("lnxsleep", msecs_to_jiffies(ms));
+	/* guard against invalid values */
+	if (ms == 0)
+		ms = 1;
+	pause_sbt("lnxsleep", SBT_1MS * ms, 0, C_HARDCLOCK);
 }
 
 #undef msleep
-#define	msleep	linux_msleep
+#define	msleep(ms) linux_msleep(ms)
 
-static inline unsigned long
-msleep_interruptible(unsigned int msecs)
-{
-	unsigned long timeout = msecs_to_jiffies(msecs) + 1;
-
-	while (timeout && !signal_pending(current))
-		timeout = schedule_timeout_interruptible(timeout);
-	return jiffies_to_msecs(timeout);
-}
+#undef msleep_interruptible
+#define	msleep_interruptible(ms) linux_msleep_interruptible(ms)
 
 #define	udelay(t)	DELAY(t)
 
@@ -75,4 +70,7 @@ usleep_range(unsigned long min, unsigned long max)
 {
 	DELAY(min);
 }
+
+extern unsigned int linux_msleep_interruptible(unsigned int ms);
+
 #endif	/* _LINUX_DELAY_H_ */
