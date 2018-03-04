@@ -83,7 +83,7 @@ linux_msleep_interruptible(unsigned int ms)
 	/* guard against invalid values */
 	if (ms == 0)
 		ms = 1;
-	ret = -pause_sbt("lnxsleep", SBT_1MS * ms, 0, C_HARDCLOCK | C_CATCH);
+	ret = -pause_sbt("lnxsleep", mstosbt(ms), 0, C_HARDCLOCK | C_CATCH);
 
 	switch (ret) {
 	case -EWOULDBLOCK:
@@ -174,6 +174,13 @@ autoremove_wake_function(wait_queue_t *wq, unsigned int state, int flags,
 	if ((ret = wake_up_task(task, state)) != 0)
 		list_del_init(&wq->task_list);
 	return (ret);
+}
+
+int
+default_wake_function(wait_queue_t *wq, unsigned int state, int flags,
+    void *key __unused)
+{
+	return (wake_up_task(wq->private, state));
 }
 
 void
