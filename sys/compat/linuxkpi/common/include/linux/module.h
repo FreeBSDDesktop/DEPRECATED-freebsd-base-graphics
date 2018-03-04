@@ -53,7 +53,6 @@
 
 #define	EXPORT_SYMBOL(name)
 #define	EXPORT_SYMBOL_GPL(name)
-
 #define	__MODULE_STRING(x) __stringify(x)
 
 /* OFED pre-module initialization */

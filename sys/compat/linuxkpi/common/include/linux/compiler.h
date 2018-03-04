@@ -64,8 +64,8 @@
 #define	__attribute_const__		__attribute__((__const__))
 #undef __always_inline
 #define	__always_inline			inline
+#define	noinline			__noinline
 #define	____cacheline_aligned		__aligned(CACHE_LINE_SIZE)
-#define noinline			__noinline
 
 #define	likely(x)			__builtin_expect(!!(x), 1)
 #define	unlikely(x)			__builtin_expect(!!(x), 0)

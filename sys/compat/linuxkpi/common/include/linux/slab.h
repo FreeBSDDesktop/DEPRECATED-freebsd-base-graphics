@@ -79,10 +79,11 @@ struct linux_kmem_cache {
 };
 
 #define	SLAB_HWCACHE_ALIGN	(1 << 0)
-// SLAB_DESTROY_BY_RCU -> SLAB_TYPESAFE_BY_RCU name change from v4.12
-#define	SLAB_TYPESAFE_BY_RCU     (1 << 1)
+#define	SLAB_TYPESAFE_BY_RCU    (1 << 1)
 #define	SLAB_RECLAIM_ACCOUNT	(1 << 2)
 
+#define	SLAB_DESTROY_BY_RCU \
+	SLAB_TYPESAFE_BY_RCU
 
 static inline gfp_t
 linux_check_m_flags(gfp_t flags)

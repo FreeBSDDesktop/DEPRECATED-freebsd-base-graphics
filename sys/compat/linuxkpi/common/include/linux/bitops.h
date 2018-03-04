@@ -53,10 +53,8 @@
 #define	BIT_MASK(nr)		(1UL << ((nr) & (BITS_PER_LONG - 1)))
 #define BIT_WORD(nr)		((nr) / BITS_PER_LONG)
 #define	GENMASK(h, l)		(((~0UL) >> (BITS_PER_LONG - (h) - 1)) & ((~0UL) << (l)))
-#define GENMASK_ULL(h, l) \
-	(((~0ULL) << (l)) & (~0ULL >> (BITS_PER_LONG_LONG - 1 - (h))))
+#define	GENMASK_ULL(h, l)	(((~0ULL) >> (BITS_PER_LONG_LONG - (h) - 1)) & ((~0ULL) << (l)))
 #define BITS_PER_BYTE           8
-
 
 #define	hweight8(x)	bitcount((uint8_t)(x))
 #define	hweight16(x)	bitcount16(x)
@@ -387,12 +385,12 @@ done:
         return ret;
 }
 
-#define for_each_set_bit(bit, addr, size)			\
+#define for_each_set_bit(bit, addr, size) \
 	for ((bit) = find_first_bit((addr), (size));		\
 	     (bit) < (size);					\
 	     (bit) = find_next_bit((addr), (size), (bit) + 1))
 
-#define for_each_clear_bit(bit, addr, size)				\
+#define	for_each_clear_bit(bit, addr, size) \
 	for ((bit) = find_first_zero_bit((addr), (size));		\
 	     (bit) < (size);						\
 	     (bit) = find_next_zero_bit((addr), (size), (bit) + 1))

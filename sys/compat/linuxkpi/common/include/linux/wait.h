@@ -76,18 +76,17 @@ struct wait_queue_head {
  * renamed and furthermore must be the default wait queue callback.
  */
 extern wait_queue_func_t autoremove_wake_function;
+extern wait_queue_func_t default_wake_function;
 
-int default_wake_function(wait_queue_t *curr, unsigned mode,
-    int wake_flags, void *key);
-
-#define DEFINE_WAIT_FUNC(name, function)				\
+#define	DEFINE_WAIT_FUNC(name, function)				\
 	wait_queue_t name = {						\
-		.private	= current,				\
-		.func		= function,				\
-		.task_list	= LINUX_LIST_HEAD_INIT((name).task_list), \
+		.private = current,					\
+		.func = function,					\
+		.task_list = LINUX_LIST_HEAD_INIT(name.task_list)	\
 	}
 
-#define DEFINE_WAIT(name) DEFINE_WAIT_FUNC(name, autoremove_wake_function)
+#define	DEFINE_WAIT(name) \
+	DEFINE_WAIT_FUNC(name, autoremove_wake_function)
 
 #define	DECLARE_WAITQUEUE(name, task)					\
 	wait_queue_t name = {						\
@@ -195,56 +194,20 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
 })
 
 /*
- * Hold the (locked) spinlock when testing the cond.
+ * The passed spinlock is held when testing the condition.
  */
 #define	wait_event_interruptible_lock_irq(wqh, cond, lock) ({		\
 	__wait_event_common(wqh, cond, MAX_SCHEDULE_TIMEOUT,		\
 	    TASK_INTERRUPTIBLE, &(lock));				\
 })
 
-#define ___wait_is_interruptible(state)					\
-	(!__builtin_constant_p(state) ||				\
-	    state == TASK_INTERRUPTIBLE || state == TASK_KILLABLE)	\
-
-#define ___wait_event(wqh, condition, state, exclusive, ret, cmd)	\
-({									\
-	DEFINE_WAIT(__wq);						\
-	long __ret = 0;							\
-									\
-	for (;;) {							\
-		long __int = linux_prepare_to_wait_event(&(wqh),	\
-		    &__wq, state);					\
-									\
-		if (condition)						\
-			break;						\
-									\
-		if (___wait_is_interruptible(state) && __int) {		\
-			__ret = __int;					\
-			goto __out;					\
-		}							\
-									\
-		cmd;							\
-	}								\
-	linux_finish_wait(&(wqh), &__wq);				\
-__out:	__ret;								\
-})
-
-#define __wait_event_lock_irq(wqh, condition, lock, cmd)		\
-	(void)___wait_event(wqh, condition, TASK_UNINTERRUPTIBLE, 0, 0,	\
-	    spin_unlock(&lock);						\
-	    cmd;							\
-	    schedule();							\
-	    spin_lock(&lock))
-
 /*
- * Sleep until a condition gets true.
+ * The passed spinlock is held when testing the condition.
  */
-#define wait_event_lock_irq(wqh, condition, lock)		\
-	do {							\
-		if (condition)					\
-			break;					\
-		__wait_event_lock_irq(wqh, condition, lock, );	\
-	} while (0)
+#define	wait_event_lock_irq(wqh, cond, lock) ({			\
+	__wait_event_common(wqh, cond, MAX_SCHEDULE_TIMEOUT,	\
+	    TASK_UNINTERRUPTIBLE, &(lock));			\
+})
 
 static inline void
 __add_wait_queue(wait_queue_head_t *wqh, wait_queue_t *wq)
@@ -287,7 +250,6 @@ bool linux_waitqueue_active(wait_queue_head_t *);
 #define	waitqueue_active(wqh)		linux_waitqueue_active(wqh)
 
 void linux_prepare_to_wait(wait_queue_head_t *, wait_queue_t *, int);
-long linux_prepare_to_wait_event(wait_queue_head_t *, wait_queue_t *, int);
 void linux_finish_wait(wait_queue_head_t *, wait_queue_t *);
 
 #define	prepare_to_wait(wqh, wq, state)	linux_prepare_to_wait(wqh, wq, state)

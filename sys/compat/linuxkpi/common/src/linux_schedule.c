@@ -83,7 +83,7 @@ linux_msleep_interruptible(unsigned int ms)
 	/* guard against invalid values */
 	if (ms == 0)
 		ms = 1;
-	ret = -pause_sbt("lnxsleep", SBT_1MS * ms, 0, C_HARDCLOCK | C_CATCH);
+	ret = -pause_sbt("lnxsleep", mstosbt(ms), 0, C_HARDCLOCK | C_CATCH);
 
 	switch (ret) {
 	case -EWOULDBLOCK:
@@ -177,11 +177,10 @@ autoremove_wake_function(wait_queue_t *wq, unsigned int state, int flags,
 }
 
 int
-default_wake_function(wait_queue_t *curr, unsigned int state,
-    int flags __unused, void *key __unused)
+default_wake_function(wait_queue_t *wq, unsigned int state, int flags,
+    void *key __unused)
 {
-	/* Linux: return try_to_wake_up(curr->private, state, flags); */
-	return (wake_up_task(curr->private, state) != 0);
+	return (wake_up_task(wq->private, state));
 }
 
 void
@@ -213,25 +212,6 @@ linux_prepare_to_wait(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
 		__add_wait_queue(wqh, wq);
 	set_task_state(current, state);
 	spin_unlock(&wqh->lock);
-}
-
-long
-linux_prepare_to_wait_event(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
-{
-	long ret = 0;
-
-	spin_lock(&wqh->lock);
-	if (unlikely(signal_pending_state(state, current))) {
-		list_del_init(&wq->task_list);
-		ret = -ERESTARTSYS;
-	} else {
-		if (list_empty(&wq->task_list))
-			__add_wait_queue(wqh, wq);
-		set_current_state(state);
-	}
-	spin_unlock(&wqh->lock);
-
-	return ret;
 }
 
 void
