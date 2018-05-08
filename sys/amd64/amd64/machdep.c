@@ -1566,6 +1566,8 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	identify_cpu1();
 	identify_hypervisor();
 
+	/* link_elf_ireloc(kmdp); */
+
 	/* Init basic tunables, hz etc */
 	init_param1();
 
@@ -1744,6 +1746,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 		cninit();
 		amd64_kdb_init();
 	}
+	link_elf_ireloc(kmdp);
 
 	getmemsize(kmdp, physfree);
 	init_param2(physmem);
@@ -1795,9 +1798,10 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	rsp0 = (vm_offset_t)thread0.td_pcb;
 	/* Ensure the stack is aligned to 16 bytes */
 	rsp0 &= ~0xFul;
-	common_tss[0].tss_rsp0 = pti ? ((vm_offset_t)PCPU_PTR(pti_stack) +
-	    PC_PTI_STACK_SZ * sizeof(uint64_t)) & ~0xful : rsp0;
+	common_tss[0].tss_rsp0 = rsp0;
 	PCPU_SET(rsp0, rsp0);
+	PCPU_SET(pti_rsp0, ((vm_offset_t)PCPU_PTR(pti_stack) +
+	    PC_PTI_STACK_SZ * sizeof(uint64_t)) & ~0xful);
 	PCPU_SET(curpcb, thread0.td_pcb);
 
 	/* transfer to user mode */
