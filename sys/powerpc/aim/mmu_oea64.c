@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD$");
  * correct.
  */
 
-#include "opt_compat.h"
 #include "opt_kstack_pages.h"
 
 #include <sys/param.h>
@@ -160,8 +159,8 @@ struct mtx	moea64_slb_mutex;
 /*
  * PTEG data.
  */
-u_int		moea64_pteg_count;
-u_int		moea64_pteg_mask;
+u_long		moea64_pteg_count;
+u_long		moea64_pteg_mask;
 
 /*
  * PVO data.
@@ -551,7 +550,8 @@ moea64_add_ofw_mappings(mmu_t mmup, phandle_t mmu, size_t sz)
 			/* If this address is direct-mapped, skip remapping */
 			if (hw_direct_map &&
 			    translations[i].om_va == PHYS_TO_DMAP(pa_base) &&
-			    moea64_calc_wimg(pa_base + off, VM_MEMATTR_DEFAULT) 			    == LPTE_M)
+			    moea64_calc_wimg(pa_base + off, VM_MEMATTR_DEFAULT)
+ 			    == LPTE_M)
 				continue;
 
 			PMAP_LOCK(kernel_pmap);
@@ -664,23 +664,24 @@ moea64_setup_direct_map(mmu_t mmup, vm_offset_t kernelstart,
 		  }
 		}
 		PMAP_UNLOCK(kernel_pmap);
-	} else {
+	}
+
+	/*
+	 * Make sure the kernel and BPVO pool stay mapped on systems either
+	 * without a direct map or on which the kernel is not already executing
+	 * out of the direct-mapped region.
+	 */
+
+	if (!hw_direct_map || kernelstart < DMAP_BASE_ADDRESS) {
+		for (pa = kernelstart & ~PAGE_MASK; pa < kernelend;
+		    pa += PAGE_SIZE)
+			moea64_kenter(mmup, pa, pa);
+	}
+
+	if (!hw_direct_map) {
 		size = moea64_bpvo_pool_size*sizeof(struct pvo_entry);
 		off = (vm_offset_t)(moea64_bpvo_pool);
-		for (pa = off; pa < off + size; pa += PAGE_SIZE) 
-		moea64_kenter(mmup, pa, pa);
-
-		/*
-		 * Map certain important things, like ourselves.
-		 *
-		 * NOTE: We do not map the exception vector space. That code is
-		 * used only in real mode, and leaving it unmapped allows us to
-		 * catch NULL pointer deferences, instead of making NULL a valid
-		 * address.
-		 */
-
-		for (pa = kernelstart & ~PAGE_MASK; pa < kernelend;
-		    pa += PAGE_SIZE) 
+		for (pa = off; pa < off + size; pa += PAGE_SIZE)
 			moea64_kenter(mmup, pa, pa);
 	}
 	ENABLE_TRANS(msr);
@@ -694,11 +695,27 @@ moea64_setup_direct_map(mmu_t mmup, vm_offset_t kernelstart,
 		unmapped_buf_allowed = hw_direct_map;
 }
 
+/* Quick sort callout for comparing physical addresses. */
+static int
+pa_cmp(const void *a, const void *b)
+{
+	const vm_paddr_t *pa = a, *pb = b;
+
+	if (*pa < *pb)
+		return (-1);
+	else if (*pa > *pb)
+		return (1);
+	else
+		return (0);
+}
+
 void
 moea64_early_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 {
 	int		i, j;
 	vm_size_t	physsz, hwphyssz;
+	vm_paddr_t	kernelphysstart, kernelphysend;
+	int		rm_pavail;
 
 #ifndef __powerpc64__
 	/* We don't have a direct map since there is no BAT */
@@ -724,6 +741,9 @@ moea64_early_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelen
 	__syncicache((void *)EXC_DSE, 0x80);
 	__syncicache((void *)EXC_ISE, 0x80);
 #endif
+
+	kernelphysstart = kernelstart & ~DMAP_BASE_ADDRESS;
+	kernelphysend = kernelend & ~DMAP_BASE_ADDRESS;
 
 	/* Get physical memory regions from firmware */
 	mem_regions(&pregions, &pregions_sz, &regions, &regions_sz);
@@ -758,34 +778,53 @@ moea64_early_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelen
 	}
 
 	/* Check for overlap with the kernel and exception vectors */
+	rm_pavail = 0;
 	for (j = 0; j < 2*phys_avail_count; j+=2) {
 		if (phys_avail[j] < EXC_LAST)
 			phys_avail[j] += EXC_LAST;
 
-		if (kernelstart >= phys_avail[j] &&
-		    kernelstart < phys_avail[j+1]) {
-			if (kernelend < phys_avail[j+1]) {
+		if (phys_avail[j] >= kernelphysstart &&
+		    phys_avail[j+1] <= kernelphysend) {
+			phys_avail[j] = phys_avail[j+1] = ~0;
+			rm_pavail++;
+			continue;
+		}
+
+		if (kernelphysstart >= phys_avail[j] &&
+		    kernelphysstart < phys_avail[j+1]) {
+			if (kernelphysend < phys_avail[j+1]) {
 				phys_avail[2*phys_avail_count] =
-				    (kernelend & ~PAGE_MASK) + PAGE_SIZE;
+				    (kernelphysend & ~PAGE_MASK) + PAGE_SIZE;
 				phys_avail[2*phys_avail_count + 1] =
 				    phys_avail[j+1];
 				phys_avail_count++;
 			}
 
-			phys_avail[j+1] = kernelstart & ~PAGE_MASK;
+			phys_avail[j+1] = kernelphysstart & ~PAGE_MASK;
 		}
 
-		if (kernelend >= phys_avail[j] &&
-		    kernelend < phys_avail[j+1]) {
-			if (kernelstart > phys_avail[j]) {
+		if (kernelphysend >= phys_avail[j] &&
+		    kernelphysend < phys_avail[j+1]) {
+			if (kernelphysstart > phys_avail[j]) {
 				phys_avail[2*phys_avail_count] = phys_avail[j];
 				phys_avail[2*phys_avail_count + 1] =
-				    kernelstart & ~PAGE_MASK;
+				    kernelphysstart & ~PAGE_MASK;
 				phys_avail_count++;
 			}
 
-			phys_avail[j] = (kernelend & ~PAGE_MASK) + PAGE_SIZE;
+			phys_avail[j] = (kernelphysend & ~PAGE_MASK) +
+			    PAGE_SIZE;
 		}
+	}
+
+	/* Remove physical available regions marked for removal (~0) */
+	if (rm_pavail) {
+		qsort(phys_avail, 2*phys_avail_count, sizeof(phys_avail[0]),
+			pa_cmp);
+		phys_avail_count -= rm_pavail;
+		for (i = 2*phys_avail_count;
+		     i < 2*(phys_avail_count + rm_pavail); i+=2)
+			phys_avail[i] = phys_avail[i+1] = 0;
 	}
 
 	physmem = btoc(physsz);
@@ -825,6 +864,11 @@ moea64_mid_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 	moea64_bpvo_pool = (struct pvo_entry *)moea64_bootstrap_alloc(
 		moea64_bpvo_pool_size*sizeof(struct pvo_entry), 0);
 	moea64_bpvo_pool_index = 0;
+
+	/* Place at address usable through the direct map */
+	if (hw_direct_map)
+		moea64_bpvo_pool = (struct pvo_entry *)
+		    PHYS_TO_DMAP((uintptr_t)moea64_bpvo_pool);
 
 	/*
 	 * Make sure kernel vsid is allocated as well as VSID 0.
@@ -898,12 +942,11 @@ moea64_late_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend
 		Maxmem = max(Maxmem, powerpc_btop(phys_avail[i + 1]));
 
 	/*
-	 * Initialize MMU and remap early physical mappings
+	 * Initialize MMU.
 	 */
 	MMU_CPU_BOOTSTRAP(mmup,0);
 	mtmsr(mfmsr() | PSL_DR | PSL_IR);
 	pmap_bootstrapped++;
-	bs_remap_earlyboot();
 
 	/*
 	 * Set the start and end of kva.
@@ -918,6 +961,11 @@ moea64_late_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend
 	for (va = virtual_avail; va < virtual_end; va += SEGMENT_LENGTH)
 		moea64_bootstrap_slb_prefault(va, 0);
 	#endif
+
+	/*
+	 * Remap any early IO mappings (console framebuffer, etc.)
+	 */
+	bs_remap_earlyboot();
 
 	/*
 	 * Figure out how far we can extend virtual_end into segment 16
@@ -1826,10 +1874,11 @@ moea64_kextract(mmu_t mmu, vm_offset_t va)
 
 	/*
 	 * Shortcut the direct-mapped case when applicable.  We never put
-	 * anything but 1:1 mappings below VM_MIN_KERNEL_ADDRESS.
+	 * anything but 1:1 (or 62-bit aliased) mappings below
+	 * VM_MIN_KERNEL_ADDRESS.
 	 */
 	if (va < VM_MIN_KERNEL_ADDRESS)
-		return (va);
+		return (va & ~DMAP_BASE_ADDRESS);
 
 	PMAP_LOCK(kernel_pmap);
 	pvo = moea64_pvo_find_va(kernel_pmap, va);
@@ -2397,7 +2446,7 @@ moea64_remove_all(mmu_t mmu, vm_page_t m)
  * calculated.
  */
 vm_offset_t
-moea64_bootstrap_alloc(vm_size_t size, u_int align)
+moea64_bootstrap_alloc(vm_size_t size, vm_size_t align)
 {
 	vm_offset_t	s, e;
 	int		i, j;
@@ -2565,12 +2614,15 @@ moea64_pvo_remove_from_page(mmu_t mmu, struct pvo_entry *pvo)
 	 * Update vm about page writeability/executability if managed
 	 */
 	PV_LOCKASSERT(pvo->pvo_pte.pa & LPTE_RPGN);
-	pg = PHYS_TO_VM_PAGE(pvo->pvo_pte.pa & LPTE_RPGN);
+	if (pvo->pvo_vaddr & PVO_MANAGED) {
+		pg = PHYS_TO_VM_PAGE(pvo->pvo_pte.pa & LPTE_RPGN);
 
-	if ((pvo->pvo_vaddr & PVO_MANAGED) && pg != NULL) {
-		LIST_REMOVE(pvo, pvo_vlink);
-		if (LIST_EMPTY(vm_page_to_pvoh(pg)))
-			vm_page_aflag_clear(pg, PGA_WRITEABLE | PGA_EXECUTABLE);
+		if (pg != NULL) {
+			LIST_REMOVE(pvo, pvo_vlink);
+			if (LIST_EMPTY(vm_page_to_pvoh(pg)))
+				vm_page_aflag_clear(pg,
+				    PGA_WRITEABLE | PGA_EXECUTABLE);
+		}
 	}
 
 	moea64_pvo_entries--;
@@ -2677,8 +2729,12 @@ moea64_dev_direct_mapped(mmu_t mmu, vm_paddr_t pa, vm_size_t size)
 	vm_offset_t ppa;
 	int error = 0;
 
+	if (hw_direct_map && mem_valid(pa, size) == 0)
+		return (0);
+
 	PMAP_LOCK(kernel_pmap);
-	key.pvo_vaddr = ppa = pa & ~ADDR_POFF;
+	ppa = pa & ~ADDR_POFF;
+	key.pvo_vaddr = DMAP_BASE_ADDRESS + ppa;
 	for (pvo = RB_FIND(pvo_tree, &kernel_pmap->pmap_pvo, &key);
 	    ppa < pa + size; ppa += PAGE_SIZE,
 	    pvo = RB_NEXT(pvo_tree, &kernel_pmap->pmap_pvo, pvo)) {

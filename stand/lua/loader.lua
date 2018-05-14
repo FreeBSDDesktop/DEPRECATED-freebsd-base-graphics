@@ -29,22 +29,33 @@
 -- $FreeBSD$
 --
 
+-- The cli module should be included first here. Some of the functions that it
+-- defines are necessary for the Lua-based loader to operate in general.
+-- Other modules will also need some of the functions it defines to safely
+-- execute loader commands.
 require("cli")
+local color = require("color")
 local core = require("core")
 local config = require("config")
+local password = require("password")
+-- The menu module will be brought in after config has loaded if we actually
+-- need it.
 local menu
+
+try_include("local")
+
+config.load()
 if not core.isMenuSkipped() then
 	menu = require("menu")
 end
-local password = require("password")
-
-local result = lfs.attributes("/boot/lua/local.lua")
--- Effectively discard any errors; we'll just act if it succeeds.
-if result ~= nil then
-	require("local")
+if core.isUEFIBoot() then
+	loader.perform("efi-autoresizecons")
 end
-
-config.load()
+-- Our console may have been setup for a different color scheme before we get
+-- here, so make sure we set the default.
+if color.isEnabled() then
+	printc(color.default())
+end
 password.check()
 -- menu might be disabled
 if menu ~= nil then

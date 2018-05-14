@@ -695,6 +695,8 @@ syncache_socket(struct syncache *sc, struct socket *lso, struct mbuf *m)
 	inp->inp_inc.inc_flags = sc->sc_inc.inc_flags;
 #ifdef INET6
 	if (sc->sc_inc.inc_flags & INC_ISIPV6) {
+		inp->inp_vflag &= ~INP_IPV4;
+		inp->inp_vflag |= INP_IPV6;
 		inp->in6p_laddr = sc->sc_inc.inc6_laddr;
 	} else {
 		inp->inp_vflag &= ~INP_IPV6;
@@ -850,6 +852,12 @@ syncache_socket(struct syncache *sc, struct socket *lso, struct mbuf *m)
 			(*tp->t_fb->tfb_tcp_fb_fini)(tp, 0);
 		refcount_release(&tp->t_fb->tfb_refcnt);
 		tp->t_fb = rblk;
+		/*
+		 * XXXrrs this is quite dangerous, it is possible
+		 * for the new function to fail to init. We also
+		 * are not asking if the handoff_is_ok though at
+		 * the very start thats probalbly ok.
+		 */
 		if (tp->t_fb->tfb_tcp_fb_init) {
 			(*tp->t_fb->tfb_tcp_fb_init)(tp);
 		}

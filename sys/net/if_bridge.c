@@ -72,8 +72,8 @@
  *
  *	- Currently only supports Ethernet-like interfaces (Ethernet,
  *	  802.11, VLANs on Ethernet, etc.)  Figure out a nice way
- *	  to bridge other types of interfaces (FDDI-FDDI, and maybe
- *	  consider heterogeneous bridges).
+ *	  to bridge other types of interfaces (maybe consider
+ *	  heterogeneous bridges).
  */
 
 #include <sys/cdefs.h>
@@ -340,7 +340,6 @@ static int	bridge_fragment(struct ifnet *, struct mbuf **mp,
 static void	bridge_linkstate(struct ifnet *ifp);
 static void	bridge_linkcheck(struct bridge_softc *sc);
 
-extern void (*bridge_linkstate_p)(struct ifnet *ifp);
 
 /* The default bridge vlan is 1 (IEEE 802.1Q-2003 Table 9-2) */
 #define	VLANTAGOF(_m)	\
@@ -556,10 +555,7 @@ bridge_modevent(module_t mod, int type, void *data)
 		bridge_rtnode_zone = uma_zcreate("bridge_rtnode",
 		    sizeof(struct bridge_rtnode), NULL, NULL, NULL, NULL,
 		    UMA_ALIGN_PTR, 0);
-		bridge_input_p = bridge_input;
-		bridge_output_p = bridge_output;
 		bridge_dn_p = bridge_dummynet;
-		bridge_linkstate_p = bridge_linkstate;
 		bridge_detach_cookie = EVENTHANDLER_REGISTER(
 		    ifnet_departure_event, bridge_ifdetach, NULL,
 		    EVENTHANDLER_PRI_ANY);
@@ -568,10 +564,7 @@ bridge_modevent(module_t mod, int type, void *data)
 		EVENTHANDLER_DEREGISTER(ifnet_departure_event,
 		    bridge_detach_cookie);
 		uma_zdestroy(bridge_rtnode_zone);
-		bridge_input_p = NULL;
-		bridge_output_p = NULL;
 		bridge_dn_p = NULL;
-		bridge_linkstate_p = NULL;
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -1041,6 +1034,9 @@ bridge_delete_member(struct bridge_softc *sc, struct bridge_iflist *bif,
 	KASSERT(bif->bif_addrcnt == 0,
 	    ("%s: %d bridge routes referenced", __func__, bif->bif_addrcnt));
 
+	ifs->if_bridge_output = NULL;
+	ifs->if_bridge_input = NULL;
+	ifs->if_bridge_linkstate = NULL;
 	BRIDGE_UNLOCK(sc);
 	if (!gone) {
 		switch (ifs->if_type) {
@@ -1198,6 +1194,9 @@ bridge_ioctl_add(struct bridge_softc *sc, void *arg)
 	}
 
 	ifs->if_bridge = sc;
+	ifs->if_bridge_output = bridge_output;
+	ifs->if_bridge_input = bridge_input;
+	ifs->if_bridge_linkstate = bridge_linkstate;
 	bstp_create(&sc->sc_stp, &bif->bif_stp, bif->bif_ifp);
 	/*
 	 * XXX: XLOCK HERE!?!
@@ -3176,7 +3175,8 @@ bridge_pfil(struct mbuf **mp, struct ifnet *bifp, struct ifnet *ifp, int dir)
 	if (PFIL_HOOKED(&V_link_pfil_hook) && V_pfil_ipfw != 0 &&
 			dir == PFIL_OUT && ifp != NULL) {
 
-		error = pfil_run_hooks(&V_link_pfil_hook, mp, ifp, dir, NULL);
+		error = pfil_run_hooks(&V_link_pfil_hook, mp, ifp, dir, 0,
+		    NULL);
 
 		if (*mp == NULL || error != 0) /* packet consumed by filter */
 			return (error);
@@ -3228,21 +3228,21 @@ bridge_pfil(struct mbuf **mp, struct ifnet *bifp, struct ifnet *ifp, int dir)
 		 */
 		if (V_pfil_bridge && dir == PFIL_OUT && bifp != NULL)
 			error = pfil_run_hooks(&V_inet_pfil_hook, mp, bifp,
-					dir, NULL);
+					dir, 0, NULL);
 
 		if (*mp == NULL || error != 0) /* filter may consume */
 			break;
 
 		if (V_pfil_member && ifp != NULL)
 			error = pfil_run_hooks(&V_inet_pfil_hook, mp, ifp,
-					dir, NULL);
+					dir, 0, NULL);
 
 		if (*mp == NULL || error != 0) /* filter may consume */
 			break;
 
 		if (V_pfil_bridge && dir == PFIL_IN && bifp != NULL)
 			error = pfil_run_hooks(&V_inet_pfil_hook, mp, bifp,
-					dir, NULL);
+					dir, 0, NULL);
 
 		if (*mp == NULL || error != 0) /* filter may consume */
 			break;
@@ -3282,21 +3282,21 @@ bridge_pfil(struct mbuf **mp, struct ifnet *bifp, struct ifnet *ifp, int dir)
 	case ETHERTYPE_IPV6:
 		if (V_pfil_bridge && dir == PFIL_OUT && bifp != NULL)
 			error = pfil_run_hooks(&V_inet6_pfil_hook, mp, bifp,
-					dir, NULL);
+					dir, 0, NULL);
 
 		if (*mp == NULL || error != 0) /* filter may consume */
 			break;
 
 		if (V_pfil_member && ifp != NULL)
 			error = pfil_run_hooks(&V_inet6_pfil_hook, mp, ifp,
-					dir, NULL);
+					dir, 0, NULL);
 
 		if (*mp == NULL || error != 0) /* filter may consume */
 			break;
 
 		if (V_pfil_bridge && dir == PFIL_IN && bifp != NULL)
 			error = pfil_run_hooks(&V_inet6_pfil_hook, mp, bifp,
-					dir, NULL);
+					dir, 0, NULL);
 		break;
 #endif
 	default:

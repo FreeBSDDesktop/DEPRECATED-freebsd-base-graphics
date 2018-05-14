@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/specialreg.h>
 #include <machine/segments.h>
 #include <machine/ucontext.h>
+#include <x86/ifunc.h>
 
 /*
  * Floating point support.
@@ -151,24 +152,58 @@ struct xsave_area_elm_descr {
 	u_int	size;
 } *xsave_area_desc;
 
-void
-fpusave(void *addr)
+static void
+fpusave_xsave(void *addr)
 {
 
-	if (use_xsave)
-		xsave((char *)addr, xsave_mask);
-	else
-		fxsave((char *)addr);
+	xsave((char *)addr, xsave_mask);
 }
 
-void
-fpurestore(void *addr)
+static void
+fpurestore_xrstor(void *addr)
+{
+
+	xrstor((char *)addr, xsave_mask);
+}
+
+static void
+fpusave_fxsave(void *addr)
+{
+
+	fxsave((char *)addr);
+}
+
+static void
+fpurestore_fxrstor(void *addr)
+{
+
+	fxrstor((char *)addr);
+}
+
+static void
+init_xsave(void)
 {
 
 	if (use_xsave)
-		xrstor((char *)addr, xsave_mask);
-	else
-		fxrstor((char *)addr);
+		return;
+	if ((cpu_feature2 & CPUID2_XSAVE) == 0)
+		return;
+	use_xsave = 1;
+	TUNABLE_INT_FETCH("hw.use_xsave", &use_xsave);
+}
+
+DEFINE_IFUNC(, void, fpusave, (void *), static)
+{
+
+	init_xsave();
+	return (use_xsave ? fpusave_xsave : fpusave_fxsave);
+}
+
+DEFINE_IFUNC(, void, fpurestore, (void *), static)
+{
+
+	init_xsave();
+	return (use_xsave ? fpurestore_xrstor : fpurestore_fxrstor);
 }
 
 void
@@ -205,14 +240,10 @@ fpuinit_bsp1(void)
 {
 	u_int cp[4];
 	uint64_t xsave_mask_user;
+	bool old_wp;
 
-	if ((cpu_feature2 & CPUID2_XSAVE) != 0) {
-		use_xsave = 1;
-		TUNABLE_INT_FETCH("hw.use_xsave", &use_xsave);
-	}
 	if (!use_xsave)
 		return;
-
 	cpuid_count(0xd, 0x0, cp);
 	xsave_mask = XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE;
 	if ((cp[0] & xsave_mask) != xsave_mask)
@@ -233,8 +264,14 @@ fpuinit_bsp1(void)
 		 * Patch the XSAVE instruction in the cpu_switch code
 		 * to XSAVEOPT.  We assume that XSAVE encoding used
 		 * REX byte, and set the bit 4 of the r/m byte.
+		 *
+		 * It seems that some BIOSes give control to the OS
+		 * with CR0.WP already set, making the kernel text
+		 * read-only before cpu_startup().
 		 */
+		old_wp = disable_wp();
 		ctx_switch_xsave[3] |= 0x10;
+		restore_wp(old_wp);
 	}
 }
 
@@ -359,7 +396,8 @@ fpuinitstate(void *arg __unused)
 	start_emulating();
 	intr_restore(saveintr);
 }
-SYSINIT(fpuinitstate, SI_SUB_DRIVERS, SI_ORDER_ANY, fpuinitstate, NULL);
+/* EFIRT needs this to be initialized before we can enter our EFI environment */
+SYSINIT(fpuinitstate, SI_SUB_DRIVERS, SI_ORDER_FIRST, fpuinitstate, NULL);
 
 /*
  * Free coprocessor (if we have it).

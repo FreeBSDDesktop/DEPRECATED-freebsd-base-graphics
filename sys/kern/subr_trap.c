@@ -161,6 +161,8 @@ userret(struct thread *td, struct trapframe *frame)
 	WITNESS_WARN(WARN_PANIC, NULL, "userret: returning");
 	KASSERT(td->td_critnest == 0,
 	    ("userret: Returning in a critical section"));
+	KASSERT(td->td_epochnest == 0,
+	    ("userret: Returning in an epoch section"));
 	KASSERT(td->td_locks == 0,
 	    ("userret: Returning with %d locks held", td->td_locks));
 	KASSERT(td->td_rw_rlocks == 0,
@@ -178,6 +180,8 @@ userret(struct thread *td, struct trapframe *frame)
 	    ("userret: Returning with stop signals deferred"));
 	KASSERT(td->td_su == NULL,
 	    ("userret: Returning with SU cleanup request not handled"));
+	KASSERT(td->td_vslock_sz == 0,
+	    ("userret: Returning with vslock-wired space"));
 #ifdef VIMAGE
 	/* Unfortunately td_vnet_lpush needs VNET_DEBUG. */
 	VNET_ASSERT(curvnet == NULL,

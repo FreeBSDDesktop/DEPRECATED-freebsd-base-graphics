@@ -29,7 +29,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_clock.h"
 
 #include <sys/param.h>
@@ -128,6 +127,26 @@ tsc_freq_vmware(void)
 			tsc_freq = regs[0] | ((uint64_t)regs[1] << 32);
 	}
 	tsc_is_invariant = 1;
+}
+
+/*
+ * Calculate TSC frequency using information from the CPUID leaf 0x15
+ * 'Time Stamp Counter and Nominal Core Crystal Clock'.  It should be
+ * an improvement over the parsing of the CPU model name in
+ * tsc_freq_intel(), when available.
+ */
+static bool
+tsc_freq_cpuid(void)
+{
+	u_int regs[4];
+
+	if (cpu_high < 0x15)
+		return (false);
+	do_cpuid(0x15, regs);
+	if (regs[0] == 0 || regs[1] == 0 || regs[2] == 0)
+		return (false);
+	tsc_freq = (uint64_t)regs[2] * regs[1] / regs[0];
+	return (true);
 }
 
 static void
@@ -254,17 +273,18 @@ probe_tsc_freq(void)
 	}
 
 	if (tsc_skip_calibration) {
-		if (cpu_vendor_id == CPU_VENDOR_INTEL)
+		if (tsc_freq_cpuid())
+			;
+		else if (cpu_vendor_id == CPU_VENDOR_INTEL)
 			tsc_freq_intel();
-		return;
+	} else {
+		if (bootverbose)
+			printf("Calibrating TSC clock ... ");
+		tsc1 = rdtsc();
+		DELAY(1000000);
+		tsc2 = rdtsc();
+		tsc_freq = tsc2 - tsc1;
 	}
-
-	if (bootverbose)
-	        printf("Calibrating TSC clock ... ");
-	tsc1 = rdtsc();
-	DELAY(1000000);
-	tsc2 = rdtsc();
-	tsc_freq = tsc2 - tsc1;
 	if (bootverbose)
 		printf("TSC clock: %ju Hz\n", (intmax_t)tsc_freq);
 }

@@ -68,6 +68,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet/ip_var.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 #include <netinet/cc/cc.h>
@@ -644,6 +645,7 @@ tcp_timer_rexmt(void * xtp)
 	KASSERT((tp->t_timers->tt_flags & TT_STOPPED) == 0,
 		("%s: tp %p tcpcb can't be stopped here", __func__, tp));
 	tcp_free_sackholes(tp);
+	TCP_LOG_EVENT(tp, NULL, NULL, NULL, TCP_LOG_RTO, 0, 0, NULL, false);
 	if (tp->t_fb->tfb_tcp_rexmit_tmr) {
 		/* The stack has a timer action too. */
 		(*tp->t_fb->tfb_tcp_rexmit_tmr)(tp);
@@ -660,8 +662,7 @@ tcp_timer_rexmt(void * xtp)
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
-		tp = tcp_drop(tp, tp->t_softerror ?
-			      tp->t_softerror : ETIMEDOUT);
+		tp = tcp_drop(tp, ETIMEDOUT);
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	}
@@ -692,7 +693,12 @@ tcp_timer_rexmt(void * xtp)
 			tp->t_flags |= TF_WASCRECOVERY;
 		else
 			tp->t_flags &= ~TF_WASCRECOVERY;
-		tp->t_badrxtwin = ticks + (tp->t_srtt >> (TCP_RTT_SHIFT + 1));
+		if ((tp->t_flags & TF_RCVD_TSTMP) == 0)
+			tp->t_badrxtwin = ticks + (tp->t_srtt >> (TCP_RTT_SHIFT + 1));
+		/* In the event that we've negotiated timestamps
+		 * badrxtwin will be set to the value that we set
+		 * the retransmitted packet's to_tsval to by tcp_output
+		 */
 		tp->t_flags |= TF_PREVVALID;
 	} else
 		tp->t_flags &= ~TF_PREVVALID;

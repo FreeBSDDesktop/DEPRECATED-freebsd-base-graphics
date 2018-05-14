@@ -382,6 +382,8 @@
         ..
         rtld-elf
         ..
+        tftpd
+        ..
     ..
     sbin
         dhclient
@@ -427,6 +429,8 @@
         acl
         ..
         aio
+        ..
+        capsicum
         ..
         cddl
             zfs
@@ -740,6 +744,8 @@
         ..
         netpfil
             pf
+                ioctl
+                ..
             ..
         ..
         opencrypto

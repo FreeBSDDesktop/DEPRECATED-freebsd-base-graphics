@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/pstate.h>
 #include <machine/wstate.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 	.register %g2, #ignore
 	.register %g3, #ignore
@@ -486,31 +486,6 @@ ENTRY(suword64)
 	retl
 	 clr	%o0
 END(suword64)
-
-	.globl	fs_nofault_intr_begin
-fs_nofault_intr_begin:
-	nop
-
-/*
- * int fuswintr(const void *base)
- */
-ENTRY(fuswintr)
-	retl
-	 lduha	[%o0] ASI_AIUP, %o0
-END(fuswintr)
-
-/*
- * int suswintr(const void *base, int word)
- */
-ENTRY(suswintr)
-	stha	%o1, [%o0] ASI_AIUP
-	retl
-	 clr	%o0
-END(suswintr)
-
-	.globl	fs_nofault_intr_end
-fs_nofault_intr_end:
-	nop
 
 	.globl	fs_nofault_end
 fs_nofault_end:

@@ -238,7 +238,7 @@ struct ada_softc {
 	int	 write_cache;
 	int	 unmappedio;
 	int	 rotating;
-#ifdef ADA_TEST_FAILURE
+#ifdef CAM_TEST_FAILURE
 	int      force_read_error;
 	int      force_write_error;
 	int      periodic_read_error;
@@ -957,7 +957,7 @@ adaclose(struct disk *dp)
 		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 		cam_fill_ataio(&ccb->ataio,
 				    1,
-				    adadone,
+				    NULL,
 				    CAM_DIR_NONE,
 				    0,
 				    NULL,
@@ -1075,7 +1075,7 @@ adadump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t len
 		ataio.ccb_h.ccb_state = ADA_CCB_DUMP;
 		cam_fill_ataio(&ataio,
 		    0,
-		    adadone,
+		    NULL,
 		    CAM_DIR_OUT,
 		    0,
 		    (u_int8_t *) virtual,
@@ -1109,7 +1109,7 @@ adadump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t len
 		ataio.ccb_h.ccb_state = ADA_CCB_DUMP;
 		cam_fill_ataio(&ataio,
 				    0,
-				    adadone,
+				    NULL,
 				    CAM_DIR_NONE,
 				    0,
 				    NULL,
@@ -1475,7 +1475,7 @@ adasysctlinit(void *context, int pending)
 		"max_seq_zones", CTLFLAG_RD, &softc->max_seq_zones,
 		"Maximum Number of Open Sequential Write Required Zones");
 
-#ifdef ADA_TEST_FAILURE
+#ifdef CAM_TEST_FAILURE
 	/*
 	 * Add a 'door bell' sysctl which allows one to set it from userland
 	 * and cause something bad to happen.  For the moment, we only allow
@@ -1493,6 +1493,10 @@ adasysctlinit(void *context, int pending)
 		OID_AUTO, "periodic_read_error", CTLFLAG_RW | CTLFLAG_MPSAFE,
 		&softc->periodic_read_error, 0,
 		"Force a read error every N reads (don't set too low).");
+	SYSCTL_ADD_PROC(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
+		OID_AUTO, "invalidate", CTLTYPE_U64 | CTLFLAG_RW | CTLFLAG_MPSAFE,
+		periph, 0, cam_periph_invalidate_sysctl, "I",
+		"Write 1 to invalidate the drive immediately");
 #endif
 
 #ifdef CAM_IO_STATS
@@ -2293,7 +2297,7 @@ adastart(struct cam_periph *periph, union ccb *start_ccb)
 				data_ptr = bp;
 			}
 
-#ifdef ADA_TEST_FAILURE
+#ifdef CAM_TEST_FAILURE
 			int fail = 0;
 
 			/*
@@ -3435,7 +3439,7 @@ adaflush(void)
 		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 		cam_fill_ataio(&ccb->ataio,
 				    0,
-				    adadone,
+				    NULL,
 				    CAM_DIR_NONE,
 				    0,
 				    NULL,
@@ -3487,7 +3491,7 @@ adaspindown(uint8_t cmd, int flags)
 
 		cam_fill_ataio(&local_ccb,
 				    0,
-				    adadone,
+				    NULL,
 				    CAM_DIR_NONE | flags,
 				    0,
 				    NULL,

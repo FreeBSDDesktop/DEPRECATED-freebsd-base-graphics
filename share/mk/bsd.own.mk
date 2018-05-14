@@ -75,6 +75,13 @@
 # CONFMODE	Configuration file mode. [644]
 #
 #
+# DIROWN	Directory owner. [root]
+#
+# DIRGRP	Directory group. [wheel]
+#
+# DIRMODE	Directory mode. [755]
+#
+#
 # DOCDIR	Base path for system documentation (e.g. PSD, USD,
 #		handbook, FAQ etc.). [${SHAREDIR}/doc]
 #
@@ -146,6 +153,7 @@ KMODOWN?=	${BINOWN}
 KMODGRP?=	${BINGRP}
 KMODMODE?=	${BINMODE}
 DTBDIR?=	/boot/dtb
+DTBODIR?=	/boot/dtb/overlays
 DTBOWN?=	root
 DTBGRP?=	wheel
 DTBMODE?=	444
@@ -184,6 +192,10 @@ MANDIR?=	${SHAREDIR}/man/man
 MANOWN?=	${SHAREOWN}
 MANGRP?=	${SHAREGRP}
 MANMODE?=	${NOBINMODE}
+
+DIROWN?=	root
+DIRGRP?=	wheel
+DIRMODE?=	755
 
 DOCDIR?=	${SHAREDIR}/doc
 DOCOWN?=	${SHAREOWN}

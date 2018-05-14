@@ -30,6 +30,7 @@
 --
 
 local config = require("config")
+local hook = require("hook")
 
 local core = {}
 
@@ -38,6 +39,26 @@ local function composeLoaderCmd(cmd_name, argstr)
 		cmd_name = cmd_name .. " " .. argstr
 	end
 	return cmd_name
+end
+
+-- Globals
+-- try_include will return the loaded module on success, or nil on failure.
+-- A message will also be printed on failure, with one exception: non-verbose
+-- loading will suppress 'module not found' errors.
+function try_include(module)
+	local status, ret = pcall(require, module)
+	-- ret is the module if we succeeded.
+	if status then
+		return ret
+	end
+	-- Otherwise, ret is just a message; filter out ENOENT unless we're
+	-- doing a verbose load. As a consequence, try_include prior to loading
+	-- configuration will not display 'module not found'. All other errors
+	-- in loading will be printed.
+	if config.verbose or ret:match("^module .+ not found") == nil then
+		error(ret, 2)
+	end
+	return nil
 end
 
 -- Module exports
@@ -138,7 +159,18 @@ function core.setSafeMode(safe_mode)
 	core.sm = safe_mode
 end
 
+function core.clearCachedKernels()
+	-- Clear the kernel cache on config changes, autodetect might have
+	-- changed or if we've switched boot environments then we could have
+	-- a new kernel set.
+	core.cached_kernels = nil
+end
+
 function core.kernelList()
+	if core.cached_kernels ~= nil then
+		return core.cached_kernels
+	end
+
 	local k = loader.getenv("kernel")
 	local v = loader.getenv("kernels")
 	local autodetect = loader.getenv("kernels_autodetect") or ""
@@ -166,7 +198,8 @@ function core.kernelList()
 	-- setting, kernels_autodetect. If it's set to 'yes', we'll add
 	-- any kernels we detect based on the criteria described.
 	if autodetect:lower() ~= "yes" then
-		return kernels
+		core.cached_kernels = kernels
+		return core.cached_kernels
 	end
 
 	-- Automatically detect other bootable kernel directories using a
@@ -195,7 +228,8 @@ function core.kernelList()
 
 		::continue::
 	end
-	return kernels
+	core.cached_kernels = kernels
+	return core.cached_kernels
 end
 
 function core.bootenvDefault()
@@ -240,18 +274,30 @@ function core.setDefaults()
 end
 
 function core.autoboot(argstr)
-	config.loadelf()
+	-- loadelf() only if we've not already loaded a kernel
+	if loader.getenv("kernelname") == nil then
+		config.loadelf()
+	end
 	loader.perform(composeLoaderCmd("autoboot", argstr))
 end
 
 function core.boot(argstr)
-	config.loadelf()
+	-- loadelf() only if we've not already loaded a kernel
+	if loader.getenv("kernelname") == nil then
+		config.loadelf()
+	end
 	loader.perform(composeLoaderCmd("boot", argstr))
 end
 
 function core.isSingleUserBoot()
 	local single_user = loader.getenv("boot_single")
 	return single_user ~= nil and single_user:lower() == "yes"
+end
+
+function core.isUEFIBoot()
+	local efiver = loader.getenv("efi-version")
+
+	return efiver ~= nil
 end
 
 function core.isZFSBoot()
@@ -345,4 +391,6 @@ end
 if core.isSystem386() and core.getACPIPresent(false) then
 	core.setACPI(true)
 end
+
+hook.register("config.reloaded", core.clearCachedKernels)
 return core

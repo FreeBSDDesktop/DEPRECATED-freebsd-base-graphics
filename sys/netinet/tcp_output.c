@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet/tcp.h>
 #define	TCPOUTFLAGS
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
@@ -205,7 +206,7 @@ tcp_output(struct tcpcb *tp)
 #if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	unsigned ipsec_optlen = 0;
 #endif
-	int idle, sendalot;
+	int idle, sendalot, curticks;
 	int sack_rxmit, sack_bytes_rxmt;
 	struct sackhole *p;
 	int tso, mtu;
@@ -807,9 +808,12 @@ send:
 		/* Timestamps. */
 		if ((tp->t_flags & TF_RCVD_TSTMP) ||
 		    ((flags & TH_SYN) && (tp->t_flags & TF_REQ_TSTMP))) {
-			to.to_tsval = tcp_ts_getticks() + tp->ts_offset;
+			curticks = tcp_ts_getticks();
+			to.to_tsval = curticks + tp->ts_offset;
 			to.to_tsecr = tp->ts_recent;
 			to.to_flags |= TOF_TS;
+			if (tp->t_rxtshift == 1)
+				tp->t_badrxtwin = curticks;
 		}
 
 		/* Set receive buffer autosizing timestamp. */
@@ -1358,6 +1362,10 @@ send:
 #endif /* TCPDEBUG */
 	TCP_PROBE3(debug__output, tp, th, m);
 
+	/* We're getting ready to send; log now. */
+	TCP_LOG_EVENT(tp, th, &so->so_rcv, &so->so_snd, TCP_LOG_OUT, ERRNO_UNK,
+	    len, NULL, false);
+
 	/*
 	 * Fill in IP length and desired time to live and
 	 * send to IP level.  There should be a better way
@@ -1549,6 +1557,9 @@ timer:
 	}
 
 	if (error) {
+		/* Record the error. */
+		TCP_LOG_EVENT(tp, NULL, &so->so_rcv, &so->so_snd, TCP_LOG_OUT,
+		    error, 0, NULL, false);
 
 		/*
 		 * We know that the packet was lost, so back out the
@@ -1578,8 +1589,6 @@ timer:
 		SOCKBUF_UNLOCK_ASSERT(&so->so_snd);	/* Check gotos. */
 		switch (error) {
 		case EACCES:
-			tp->t_softerror = error;
-			return (0);
 		case EPERM:
 			tp->t_softerror = error;
 			return (error);

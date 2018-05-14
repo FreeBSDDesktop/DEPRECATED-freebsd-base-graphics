@@ -297,6 +297,10 @@ struct port_info {
  	struct port_stats stats;
 	u_int tnl_cong_drops;
 	u_int tx_parse_error;
+	u_long	tx_tls_records;
+	u_long	tx_tls_octets;
+	u_long	rx_tls_records;
+	u_long	rx_tls_octets;
 
 	struct callout tick;
 };
@@ -361,6 +365,19 @@ enum {
 	NM_BUSY	= 2,
 };
 
+enum {
+	CPL_COOKIE_RESERVED = 0,
+	CPL_COOKIE_FILTER,
+	CPL_COOKIE_DDP0,
+	CPL_COOKIE_DDP1,
+	CPL_COOKIE_TOM,
+	CPL_COOKIE_HASHFILTER,
+	CPL_COOKIE_AVAILABLE2,
+	CPL_COOKIE_AVAILABLE3,
+
+	NUM_CPL_COOKIES = 8	/* Limited by M_COOKIE.  Do not increase. */
+};
+
 struct sge_iq;
 struct rss_header;
 typedef int (*cpl_handler_t)(struct sge_iq *, const struct rss_header *,
@@ -375,8 +392,6 @@ struct sge_iq {
 	uint32_t flags;
 	volatile int state;
 	struct adapter *adapter;
-	cpl_handler_t set_tcb_rpl;
-	cpl_handler_t l2t_write_rpl;
 	struct iq_desc  *desc;	/* KVA of descriptor ring */
 	int8_t   intr_pktc_idx;	/* packet count threshold index */
 	uint8_t  gen;		/* generation bit */
@@ -800,8 +815,11 @@ struct adapter {
 
 	void *tom_softc;	/* (struct tom_data *) */
 	struct tom_tunables tt;
-	struct iw_tunables iwt;
+	struct t4_offload_policy *policy;
+	struct rwlock policy_lock;
+
 	void *iwarp_softc;	/* (struct c4iw_dev *) */
+	struct iw_tunables iwt;
 	void *iscsi_ulp_softc;	/* (struct cxgbei_data *) */
 	void *ccr_softc;	/* (struct ccr_softc *) */
 	struct l2t_data *l2t;	/* L2 table */
@@ -1140,7 +1158,6 @@ void t4_init_devnames(struct adapter *);
 void t4_add_adapter(struct adapter *);
 void t4_aes_getdeckey(void *, const void *, unsigned int);
 int t4_detach_common(device_t);
-int t4_filter_rpl(struct sge_iq *, const struct rss_header *, struct mbuf *);
 int t4_map_bars_0_and_4(struct adapter *);
 int t4_map_bar_2(struct adapter *);
 int t4_setup_intr_handlers(struct adapter *);
@@ -1156,6 +1173,13 @@ int vi_full_init(struct vi_info *);
 int vi_full_uninit(struct vi_info *);
 void vi_sysctls(struct vi_info *);
 void vi_tick(void *);
+int rw_via_memwin(struct adapter *, int, uint32_t, uint32_t *, int, int);
+int alloc_atid_tab(struct tid_info *, int);
+void free_atid_tab(struct tid_info *);
+int alloc_atid(struct adapter *, void *);
+void *lookup_atid(struct adapter *, int);
+void free_atid(struct adapter *, int);
+void release_tid(struct adapter *, int, struct sge_wrq *);
 
 #ifdef DEV_NETMAP
 /* t4_netmap.c */
@@ -1189,9 +1213,10 @@ int parse_pkt(struct adapter *, struct mbuf **);
 void *start_wrq_wr(struct sge_wrq *, int, struct wrq_cookie *);
 void commit_wrq_wr(struct sge_wrq *, void *, struct wrq_cookie *);
 int tnl_cong(struct port_info *, int);
-int t4_register_an_handler(an_handler_t);
-int t4_register_fw_msg_handler(int, fw_msg_handler_t);
-int t4_register_cpl_handler(int, cpl_handler_t);
+void t4_register_an_handler(an_handler_t);
+void t4_register_fw_msg_handler(int, fw_msg_handler_t);
+void t4_register_cpl_handler(int, cpl_handler_t);
+void t4_register_shared_cpl_handler(int, cpl_handler_t, int);
 
 /* t4_tracer.c */
 struct t4_tracer;
@@ -1211,6 +1236,17 @@ int t4_free_tx_sched(struct adapter *);
 void t4_update_tx_sched(struct adapter *);
 int t4_reserve_cl_rl_kbps(struct adapter *, int, u_int, int *);
 void t4_release_cl_rl_kbps(struct adapter *, int, int);
+
+/* t4_filter.c */
+int get_filter_mode(struct adapter *, uint32_t *);
+int set_filter_mode(struct adapter *, uint32_t);
+int get_filter(struct adapter *, struct t4_filter *);
+int set_filter(struct adapter *, struct t4_filter *);
+int del_filter(struct adapter *, struct t4_filter *);
+int t4_filter_rpl(struct sge_iq *, const struct rss_header *, struct mbuf *);
+int t4_hashfilter_ao_rpl(struct sge_iq *, const struct rss_header *, struct mbuf *);
+int t4_hashfilter_tcb_rpl(struct sge_iq *, const struct rss_header *, struct mbuf *);
+int t4_del_hashfilter_rpl(struct sge_iq *, const struct rss_header *, struct mbuf *);
 
 static inline struct wrqe *
 alloc_wrqe(int wr_len, struct sge_wrq *wrq)
@@ -1248,4 +1284,19 @@ t4_wrq_tx(struct adapter *sc, struct wrqe *wr)
 	TXQ_UNLOCK(wrq);
 }
 
+static inline int
+read_via_memwin(struct adapter *sc, int idx, uint32_t addr, uint32_t *val,
+    int len)
+{
+
+	return (rw_via_memwin(sc, idx, addr, val, len, 0));
+}
+
+static inline int
+write_via_memwin(struct adapter *sc, int idx, uint32_t addr,
+    const uint32_t *val, int len)
+{
+
+	return (rw_via_memwin(sc, idx, addr, (void *)(uintptr_t)val, len, 1));
+}
 #endif

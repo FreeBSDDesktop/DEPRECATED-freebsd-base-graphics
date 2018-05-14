@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/domain.h>
 #include <sys/protosw.h>
 #include <sys/rmlock.h>
+#include <sys/smp.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sockio.h>
@@ -87,6 +88,9 @@ __FBSDID("$FreeBSD$");
 #include <netinet/in_pcb.h>
 #include <netinet/ip_var.h>
 #include <netinet/tcp_var.h>
+#ifdef TCPHPTS
+#include <netinet/tcp_hpts.h>
+#endif
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
 #endif
@@ -1224,9 +1228,28 @@ in_pcbrele_rlocked(struct inpcb *inp)
 		}
 		return (0);
 	}
-
+	
 	KASSERT(inp->inp_socket == NULL, ("%s: inp_socket != NULL", __func__));
-
+#ifdef TCPHPTS
+	if (inp->inp_in_hpts || inp->inp_in_input) {
+		struct tcp_hpts_entry *hpts;
+		/*
+		 * We should not be on the hpts at 
+		 * this point in any form. we must
+		 * get the lock to be sure.
+		 */
+		hpts = tcp_hpts_lock(inp);
+		if (inp->inp_in_hpts)
+			panic("Hpts:%p inp:%p at free still on hpts",
+			      hpts, inp);
+		mtx_unlock(&hpts->p_mtx);
+		hpts = tcp_input_lock(inp);
+		if (inp->inp_in_input) 
+			panic("Hpts:%p inp:%p at free still on input hpts",
+			      hpts, inp);
+		mtx_unlock(&hpts->p_mtx);
+	}
+#endif
 	INP_RUNLOCK(inp);
 	pcbinfo = inp->inp_pcbinfo;
 	uma_zfree(pcbinfo->ipi_zone, inp);
@@ -1255,7 +1278,26 @@ in_pcbrele_wlocked(struct inpcb *inp)
 	}
 
 	KASSERT(inp->inp_socket == NULL, ("%s: inp_socket != NULL", __func__));
-
+#ifdef TCPHPTS
+	if (inp->inp_in_hpts || inp->inp_in_input) {
+		struct tcp_hpts_entry *hpts;
+		/*
+		 * We should not be on the hpts at 
+		 * this point in any form. we must
+		 * get the lock to be sure.
+		 */
+		hpts = tcp_hpts_lock(inp);
+		if (inp->inp_in_hpts)
+			panic("Hpts:%p inp:%p at free still on hpts",
+			      hpts, inp);
+		mtx_unlock(&hpts->p_mtx);
+		hpts = tcp_input_lock(inp);
+		if (inp->inp_in_input) 
+			panic("Hpts:%p inp:%p at free still on input hpts",
+			      hpts, inp);
+		mtx_unlock(&hpts->p_mtx);
+	}
+#endif
 	INP_WUNLOCK(inp);
 	pcbinfo = inp->inp_pcbinfo;
 	uma_zfree(pcbinfo->ipi_zone, inp);
@@ -1286,7 +1328,20 @@ in_pcbfree(struct inpcb *inp)
 {
 	struct inpcbinfo *pcbinfo = inp->inp_pcbinfo;
 
+#ifdef INET6
+	struct ip6_moptions *im6o = NULL;
+#endif
+#ifdef INET
+	struct ip_moptions *imo = NULL;
+#endif
 	KASSERT(inp->inp_socket == NULL, ("%s: inp_socket != NULL", __func__));
+
+	KASSERT((inp->inp_flags2 & INP_FREED) == 0,
+	    ("%s: called twice for pcb %p", __func__, inp));
+	if (inp->inp_flags2 & INP_FREED) {
+		INP_WUNLOCK(inp);
+		return;
+	}
 
 #ifdef INVARIANTS
 	if (pcbinfo == &V_tcbinfo) {
@@ -1297,6 +1352,10 @@ in_pcbfree(struct inpcb *inp)
 #endif
 	INP_WLOCK_ASSERT(inp);
 
+#ifdef INET
+	imo = inp->inp_moptions;
+	inp->inp_moptions = NULL;
+#endif
 	/* XXXRW: Do as much as possible here. */
 #if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	if (inp->inp_sp != NULL)
@@ -1309,16 +1368,12 @@ in_pcbfree(struct inpcb *inp)
 #ifdef INET6
 	if (inp->inp_vflag & INP_IPV6PROTO) {
 		ip6_freepcbopts(inp->in6p_outputopts);
-		if (inp->in6p_moptions != NULL)
-			ip6_freemoptions(inp->in6p_moptions);
+		im6o = inp->in6p_moptions;
+		inp->in6p_moptions = NULL;
 	}
 #endif
 	if (inp->inp_options)
 		(void)m_free(inp->inp_options);
-#ifdef INET
-	if (inp->inp_moptions != NULL)
-		inp_freemoptions(inp->inp_moptions);
-#endif
 	RO_INVALIDATE_CACHE(&inp->inp_route);
 
 	inp->inp_vflag = 0;
@@ -1329,6 +1384,16 @@ in_pcbfree(struct inpcb *inp)
 #endif
 	if (!in_pcbrele_wlocked(inp))
 		INP_WUNLOCK(inp);
+#if defined(INET) && defined(INET6)
+	if (imo == NULL && im6o == NULL)
+		return;
+#endif
+#ifdef INET6
+	ip6_freemoptions(im6o, pcbinfo);
+#endif
+#ifdef INET
+	inp_freemoptions(imo, pcbinfo);
+#endif
 }
 
 /*
@@ -1484,7 +1549,8 @@ in_pcbpurgeif0(struct inpcbinfo *pcbinfo, struct ifnet *ifp)
 			for (i = 0, gap = 0; i < imo->imo_num_memberships;
 			    i++) {
 				if (imo->imo_membership[i]->inm_ifp == ifp) {
-					in_delmulti(imo->imo_membership[i]);
+					IN_MULTI_LOCK_ASSERT();
+					in_leavegroup_locked(imo->imo_membership[i], NULL);
 					gap++;
 				} else if (gap != 0)
 					imo->imo_membership[i - gap] =
@@ -1632,6 +1698,7 @@ in_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 	struct inpcbhead *head;
 	struct inpcb *inp, *tmpinp;
 	u_short fport = fport_arg, lport = lport_arg;
+	bool locked;
 
 	/*
 	 * First look for an exact match.
@@ -1818,18 +1885,32 @@ in_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 	return (NULL);
 
 found:
-	in_pcbref(inp);
-	INP_GROUP_UNLOCK(pcbgroup);
-	if (lookupflags & INPLOOKUP_WLOCKPCB) {
-		INP_WLOCK(inp);
-		if (in_pcbrele_wlocked(inp))
-			return (NULL);
-	} else if (lookupflags & INPLOOKUP_RLOCKPCB) {
-		INP_RLOCK(inp);
-		if (in_pcbrele_rlocked(inp))
-			return (NULL);
-	} else
+	if (lookupflags & INPLOOKUP_WLOCKPCB)
+		locked = INP_TRY_WLOCK(inp);
+	else if (lookupflags & INPLOOKUP_RLOCKPCB)
+		locked = INP_TRY_RLOCK(inp);
+	else
 		panic("%s: locking bug", __func__);
+	if (!locked)
+		in_pcbref(inp);
+	INP_GROUP_UNLOCK(pcbgroup);
+	if (!locked) {
+		if (lookupflags & INPLOOKUP_WLOCKPCB) {
+			INP_WLOCK(inp);
+			if (in_pcbrele_wlocked(inp))
+				return (NULL);
+		} else {
+			INP_RLOCK(inp);
+			if (in_pcbrele_rlocked(inp))
+				return (NULL);
+		}
+	}
+#ifdef INVARIANTS
+	if (lookupflags & INPLOOKUP_WLOCKPCB)
+		INP_WLOCK_ASSERT(inp);
+	else
+		INP_RLOCK_ASSERT(inp);
+#endif
 	return (inp);
 }
 #endif /* PCBGROUP */
@@ -1968,23 +2049,38 @@ in_pcblookup_hash(struct inpcbinfo *pcbinfo, struct in_addr faddr,
     struct ifnet *ifp)
 {
 	struct inpcb *inp;
+	bool locked;
 
 	INP_HASH_RLOCK(pcbinfo);
 	inp = in_pcblookup_hash_locked(pcbinfo, faddr, fport, laddr, lport,
 	    (lookupflags & ~(INPLOOKUP_RLOCKPCB | INPLOOKUP_WLOCKPCB)), ifp);
 	if (inp != NULL) {
-		in_pcbref(inp);
-		INP_HASH_RUNLOCK(pcbinfo);
-		if (lookupflags & INPLOOKUP_WLOCKPCB) {
-			INP_WLOCK(inp);
-			if (in_pcbrele_wlocked(inp))
-				return (NULL);
-		} else if (lookupflags & INPLOOKUP_RLOCKPCB) {
-			INP_RLOCK(inp);
-			if (in_pcbrele_rlocked(inp))
-				return (NULL);
-		} else
+		if (lookupflags & INPLOOKUP_WLOCKPCB)
+			locked = INP_TRY_WLOCK(inp);
+		else if (lookupflags & INPLOOKUP_RLOCKPCB)
+			locked = INP_TRY_RLOCK(inp);
+		else
 			panic("%s: locking bug", __func__);
+		if (!locked)
+			in_pcbref(inp);
+		INP_HASH_RUNLOCK(pcbinfo);
+		if (!locked) {
+			if (lookupflags & INPLOOKUP_WLOCKPCB) {
+				INP_WLOCK(inp);
+				if (in_pcbrele_wlocked(inp))
+					return (NULL);
+			} else {
+				INP_RLOCK(inp);
+				if (in_pcbrele_rlocked(inp))
+					return (NULL);
+			}
+		}
+#ifdef INVARIANTS
+		if (lookupflags & INPLOOKUP_WLOCKPCB)
+			INP_WLOCK_ASSERT(inp);
+		else
+			INP_RLOCK_ASSERT(inp);
+#endif
 	} else
 		INP_HASH_RUNLOCK(pcbinfo);
 	return (inp);

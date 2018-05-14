@@ -370,6 +370,8 @@ struct adapter_params {
 				   resources for TOE operation. */
 	unsigned int bypass:1;	/* this is a bypass card */
 	unsigned int ethoffload:1;
+	unsigned int hash_filter:1;
+	unsigned int filter2_wr_support:1;
 
 	unsigned int ofldq_wr_cred;
 	unsigned int eo_wr_cred;
@@ -458,6 +460,11 @@ static inline int is_ethoffload(const struct adapter *adap)
 	return adap->params.ethoffload;
 }
 
+static inline int is_hashfilter(const struct adapter *adap)
+{
+	return adap->params.hash_filter;
+}
+
 static inline int chip_id(struct adapter *adap)
 {
 	return adap->params.chipid;
@@ -517,6 +524,12 @@ static inline u_int us_to_tcp_ticks(const struct adapter *adap, u_long us)
 {
 
 	return (us * adap->params.vpd.cclk / 1000 >> adap->params.tp.tre);
+}
+
+static inline u_int tcp_ticks_to_us(const struct adapter *adap, u_int ticks)
+{
+	return ((uint64_t)ticks << adap->params.tp.tre) /
+	    core_ticks_per_usec(adap);
 }
 
 void t4_set_reg_field(struct adapter *adap, unsigned int addr, u32 mask, u32 val);

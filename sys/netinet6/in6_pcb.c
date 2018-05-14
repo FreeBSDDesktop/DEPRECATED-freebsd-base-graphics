@@ -805,8 +805,7 @@ in6_pcbpurgeif0(struct inpcbinfo *pcbinfo, struct ifnet *ifp)
 			for (i = 0; i < im6o->im6o_num_memberships; i++) {
 				if (im6o->im6o_membership[i]->in6m_ifp ==
 				    ifp) {
-					in6_mc_leave(im6o->im6o_membership[i],
-					    NULL);
+					in6_leavegroup(im6o->im6o_membership[i], NULL);
 					gap++;
 				} else if (gap != 0) {
 					im6o->im6o_membership[i - gap] =
@@ -868,6 +867,7 @@ in6_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 	struct inpcbhead *head;
 	struct inpcb *inp, *tmpinp;
 	u_short fport = fport_arg, lport = lport_arg;
+	bool locked;
 
 	/*
 	 * First look for an exact match.
@@ -1026,18 +1026,32 @@ in6_pcblookup_group(struct inpcbinfo *pcbinfo, struct inpcbgroup *pcbgroup,
 	return (NULL);
 
 found:
-	in_pcbref(inp);
-	INP_GROUP_UNLOCK(pcbgroup);
-	if (lookupflags & INPLOOKUP_WLOCKPCB) {
-		INP_WLOCK(inp);
-		if (in_pcbrele_wlocked(inp))
-			return (NULL);
-	} else if (lookupflags & INPLOOKUP_RLOCKPCB) {
-		INP_RLOCK(inp);
-		if (in_pcbrele_rlocked(inp))
-			return (NULL);
-	} else
+	if (lookupflags & INPLOOKUP_WLOCKPCB)
+		locked = INP_TRY_WLOCK(inp);
+	else if (lookupflags & INPLOOKUP_RLOCKPCB)
+		locked = INP_TRY_RLOCK(inp);
+	else
 		panic("%s: locking buf", __func__);
+	if (!locked)
+		in_pcbref(inp);
+	INP_GROUP_UNLOCK(pcbgroup);
+	if (!locked) {
+		if (lookupflags & INPLOOKUP_WLOCKPCB) {
+			INP_WLOCK(inp);
+			if (in_pcbrele_wlocked(inp))
+				return (NULL);
+		} else {
+			INP_RLOCK(inp);
+			if (in_pcbrele_rlocked(inp))
+				return (NULL);
+		}
+	}
+#ifdef INVARIANTS
+	if (lookupflags & INPLOOKUP_WLOCKPCB)
+		INP_WLOCK_ASSERT(inp);
+	else
+		INP_RLOCK_ASSERT(inp);
+#endif
 	return (inp);
 }
 #endif /* PCBGROUP */
@@ -1163,23 +1177,38 @@ in6_pcblookup_hash(struct inpcbinfo *pcbinfo, struct in6_addr *faddr,
     struct ifnet *ifp)
 {
 	struct inpcb *inp;
+	bool locked;
 
 	INP_HASH_RLOCK(pcbinfo);
 	inp = in6_pcblookup_hash_locked(pcbinfo, faddr, fport, laddr, lport,
 	    (lookupflags & ~(INPLOOKUP_RLOCKPCB | INPLOOKUP_WLOCKPCB)), ifp);
 	if (inp != NULL) {
-		in_pcbref(inp);
-		INP_HASH_RUNLOCK(pcbinfo);
-		if (lookupflags & INPLOOKUP_WLOCKPCB) {
-			INP_WLOCK(inp);
-			if (in_pcbrele_wlocked(inp))
-				return (NULL);
-		} else if (lookupflags & INPLOOKUP_RLOCKPCB) {
-			INP_RLOCK(inp);
-			if (in_pcbrele_rlocked(inp))
-				return (NULL);
-		} else
+		if (lookupflags & INPLOOKUP_WLOCKPCB)
+			locked = INP_TRY_WLOCK(inp);
+		else if (lookupflags & INPLOOKUP_RLOCKPCB)
+			locked = INP_TRY_RLOCK(inp);
+		else
 			panic("%s: locking bug", __func__);
+		if (!locked)
+			in_pcbref(inp);
+		INP_HASH_RUNLOCK(pcbinfo);
+		if (!locked) {
+			if (lookupflags & INPLOOKUP_WLOCKPCB) {
+				INP_WLOCK(inp);
+				if (in_pcbrele_wlocked(inp))
+					return (NULL);
+			} else {
+				INP_RLOCK(inp);
+				if (in_pcbrele_rlocked(inp))
+					return (NULL);
+			}
+		}
+#ifdef INVARIANTS
+		if (lookupflags & INPLOOKUP_WLOCKPCB)
+			INP_WLOCK_ASSERT(inp);
+		else
+			INP_RLOCK_ASSERT(inp);
+#endif
 	} else
 		INP_HASH_RUNLOCK(pcbinfo);
 	return (inp);

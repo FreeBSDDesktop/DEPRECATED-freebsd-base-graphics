@@ -3807,6 +3807,29 @@ zfs_ioc_channel_program(const char *poolname, nvlist_t *innvl,
 }
 
 /*
+ * innvl: unused
+ * outnvl: empty
+ */
+/* ARGSUSED */
+static int
+zfs_ioc_pool_checkpoint(const char *poolname, nvlist_t *innvl, nvlist_t *outnvl)
+{
+	return (spa_checkpoint(poolname));
+}
+
+/*
+ * innvl: unused
+ * outnvl: empty
+ */
+/* ARGSUSED */
+static int
+zfs_ioc_pool_discard_checkpoint(const char *poolname, nvlist_t *innvl,
+    nvlist_t *outnvl)
+{
+	return (spa_checkpoint_discard(poolname));
+}
+
+/*
  * inputs:
  * zc_name		name of dataset to destroy
  * zc_objset_type	type of objset
@@ -4423,7 +4446,6 @@ zfs_ioc_recv(zfs_cmd_t *zc)
 	char *origin = NULL;
 	char *tosnap;
 	char tofs[ZFS_MAX_DATASET_NAME_LEN];
-	cap_rights_t rights;
 	boolean_t first_recvd_props = B_FALSE;
 
 	if (dataset_namecheck(zc->zc_value, NULL, NULL) != 0 ||
@@ -4444,7 +4466,7 @@ zfs_ioc_recv(zfs_cmd_t *zc)
 #ifdef illumos
 	fp = getf(fd);
 #else
-	fget_read(curthread, fd, cap_rights_init(&rights, CAP_PREAD), &fp);
+	fget_read(curthread, fd, &cap_pread_rights, &fp);
 #endif
 	if (fp == NULL) {
 		nvlist_free(props);
@@ -4721,13 +4743,11 @@ zfs_ioc_send(zfs_cmd_t *zc)
 		dsl_pool_rele(dp, FTAG);
 	} else {
 		file_t *fp;
-		cap_rights_t rights;
 
 #ifdef illumos
 		fp = getf(zc->zc_cookie);
 #else
-		fget_write(curthread, zc->zc_cookie,
-		    cap_rights_init(&rights, CAP_WRITE), &fp);
+		fget_write(curthread, zc->zc_cookie, &cap_write_rights, &fp);
 #endif
 		if (fp == NULL)
 			return (SET_ERROR(EBADF));
@@ -5115,14 +5135,14 @@ zfs_ioc_userspace_upgrade(zfs_cmd_t *zc)
 			 * objset needs to be closed & reopened (to grow the
 			 * objset_phys_t).  Suspend/resume the fs will do that.
 			 */
-			dsl_dataset_t *ds;
+			dsl_dataset_t *ds, *newds;
 
 			ds = dmu_objset_ds(zfsvfs->z_os);
 			error = zfs_suspend_fs(zfsvfs);
 			if (error == 0) {
-				dmu_objset_refresh_ownership(zfsvfs->z_os,
+				dmu_objset_refresh_ownership(ds, &newds,
 				    zfsvfs);
-				error = zfs_resume_fs(zfsvfs, ds);
+				error = zfs_resume_fs(zfsvfs, newds);
 			}
 		}
 		if (error == 0)
@@ -5364,15 +5384,13 @@ static int
 zfs_ioc_diff(zfs_cmd_t *zc)
 {
 	file_t *fp;
-	cap_rights_t rights;
 	offset_t off;
 	int error;
 
 #ifdef illumos
 	fp = getf(zc->zc_cookie);
 #else
-	fget_write(curthread, zc->zc_cookie,
-		    cap_rights_init(&rights, CAP_WRITE), &fp);
+	fget_write(curthread, zc->zc_cookie, &cap_write_rights, &fp);
 #endif
 	if (fp == NULL)
 		return (SET_ERROR(EBADF));
@@ -5764,7 +5782,6 @@ zfs_ioc_unjail(zfs_cmd_t *zc)
 static int
 zfs_ioc_send_new(const char *snapname, nvlist_t *innvl, nvlist_t *outnvl)
 {
-	cap_rights_t rights;
 	file_t *fp;
 	int error;
 	offset_t off;
@@ -5792,7 +5809,7 @@ zfs_ioc_send_new(const char *snapname, nvlist_t *innvl, nvlist_t *outnvl)
 #ifdef illumos
 	file_t *fp = getf(fd);
 #else
-	fget_write(curthread, fd, cap_rights_init(&rights, CAP_WRITE), &fp);
+	fget_write(curthread, fd, &cap_write_rights, &fp);
 #endif
 	if (fp == NULL)
 		return (SET_ERROR(EBADF));
@@ -6085,6 +6102,15 @@ zfs_ioctl_init(void)
 	    zfs_ioc_channel_program, zfs_secpolicy_config,
 	    POOL_NAME, POOL_CHECK_SUSPENDED | POOL_CHECK_READONLY, B_TRUE,
 	    B_TRUE);
+
+	zfs_ioctl_register("zpool_checkpoint", ZFS_IOC_POOL_CHECKPOINT,
+	    zfs_ioc_pool_checkpoint, zfs_secpolicy_config, POOL_NAME,
+	    POOL_CHECK_SUSPENDED | POOL_CHECK_READONLY, B_TRUE, B_TRUE);
+
+	zfs_ioctl_register("zpool_discard_checkpoint",
+	    ZFS_IOC_POOL_DISCARD_CHECKPOINT, zfs_ioc_pool_discard_checkpoint,
+	    zfs_secpolicy_config, POOL_NAME,
+	    POOL_CHECK_SUSPENDED | POOL_CHECK_READONLY, B_TRUE, B_TRUE);
 
 	/* IOCTLS that use the legacy function signature */
 
@@ -6408,6 +6434,10 @@ zfsdev_ioctl(struct cdev *dev, u_long zcmd, caddr_t arg, int flag,
 			cflag = ZFS_CMD_COMPAT_V28;
 			break;
 		case sizeof(zfs_cmd_v15_t):
+			if (cmd >= sizeof(zfs_ioctl_v15_to_v28) /
+			    sizeof(zfs_ioctl_v15_to_v28[0]))
+				return (EINVAL);
+
 			cflag = ZFS_CMD_COMPAT_V15;
 			vecnum = zfs_ioctl_v15_to_v28[cmd];
 

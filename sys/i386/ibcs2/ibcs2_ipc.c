@@ -135,6 +135,8 @@ ibcs2_msgctl(struct thread *td, void *v)
 	struct msqid_ds bs;
 	int error;
 
+	memset(&is, 0, sizeof(is));
+
 	switch (uap->cmd) {
 	case IBCS2_IPC_STAT:
 		error = kern_msgctl(td, uap->msqid, IPC_STAT, &bs);
@@ -280,7 +282,7 @@ cvt_semid2isemid(bp, ibp)
 struct semid_ds *bp;
 struct ibcs2_semid_ds *ibp;
 {
-	memset(ibp, 0, sizeof(*ibp);
+	memset(ibp, 0, sizeof(*ibp));
 	cvt_perm2iperm(&bp->sem_perm, &ibp->sem_perm);
 	ibp->sem_nsems = bp->sem_nsems;
 	ibp->sem_otime = bp->sem_otime;
@@ -317,6 +319,8 @@ ibcs2_semctl(struct thread *td, void *v)
 	union semun semun;
 	register_t rval;
 	int error;
+
+	memset(&is, 0, sizeof(is));
 
 	switch(uap->cmd) {
 	case IBCS2_IPC_STAT:

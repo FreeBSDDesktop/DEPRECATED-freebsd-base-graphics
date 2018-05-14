@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/poll.h>
 #include <sys/selinfo.h>
 #include <sys/sdt.h>
+#include <sys/sysent.h>
 #include <sys/taskqueue.h>
 #include <vm/uma.h>
 #include <vm/vm.h>
@@ -1859,6 +1860,12 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 		union ccb **user_ccb, *ccb;
 		xpt_opcode fc;
 
+#ifdef COMPAT_FREEBSD32
+		if (SV_PROC_FLAG(td->td_proc, SV_ILP32)) {
+			error = ENOTTY;
+			goto bailout;
+		}
+#endif
 		if ((softc->flags & PASS_FLAG_ZONE_VALID) == 0) {
 			error = passcreatezone(periph);
 			if (error != 0)
@@ -2033,6 +2040,12 @@ camioqueue_error:
 		struct pass_io_req *io_req;
 		int old_error;
 
+#ifdef COMPAT_FREEBSD32
+		if (SV_PROC_FLAG(td->td_proc, SV_ILP32)) {
+			error = ENOTTY;
+			goto bailout;
+		}
+#endif
 		user_ccb = (union ccb **)addr;
 		old_error = 0;
 
@@ -2206,10 +2219,6 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 			return (error);
 		ccb->csio.cdb_io.cdb_ptr = cmd;
 	}
-
-	/*
-	 */
-	ccb->ccb_h.cbfcnp = passdone;
 
 	/*
 	 * Let cam_periph_mapmem do a sanity check on the data pointer format.

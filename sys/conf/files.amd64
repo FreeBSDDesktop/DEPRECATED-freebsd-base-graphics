@@ -105,7 +105,7 @@ hptrr_lib.o			optional	hptrr			\
 #
 amd64/acpica/acpi_machdep.c	optional	acpi
 acpi_wakecode.o			optional	acpi			\
-	dependency	"$S/amd64/acpica/acpi_wakecode.S assym.s"	\
+	dependency	"$S/amd64/acpica/acpi_wakecode.S assym.inc"	\
 	compile-with	"${NORMAL_S}"					\
 	no-obj no-implicit-rule before-depend				\
 	clean		"acpi_wakecode.o"
@@ -290,6 +290,8 @@ dev/ixl/i40e_nvm.c		optional	ixl pci | ixlv pci \
 	compile-with "${NORMAL_C} -I$S/dev/ixl"
 dev/ixl/i40e_adminq.c		optional	ixl pci | ixlv pci \
 	compile-with "${NORMAL_C} -I$S/dev/ixl"
+dev/ixl/i40e_dcb.c		optional	ixl pci \
+	compile-with "${NORMAL_C} -I$S/dev/ixl"
 dev/fdc/fdc.c			optional	fdc
 dev/fdc/fdc_acpi.c		optional	fdc
 dev/fdc/fdc_isa.c		optional	fdc isa
@@ -463,6 +465,22 @@ dev/sio/sio_isa.c		optional	sio isa
 dev/sio/sio_pccard.c		optional	sio pccard
 dev/sio/sio_pci.c		optional	sio pci
 dev/sio/sio_puc.c		optional	sio puc
+dev/smartpqi/smartpqi_cam.c     optional 	smartpqi
+dev/smartpqi/smartpqi_cmd.c     optional 	smartpqi
+dev/smartpqi/smartpqi_discovery.c	optional	smartpqi
+dev/smartpqi/smartpqi_event.c   optional 	smartpqi
+dev/smartpqi/smartpqi_helper.c  optional 	smartpqi
+dev/smartpqi/smartpqi_init.c    optional 	smartpqi
+dev/smartpqi/smartpqi_intr.c    optional 	smartpqi
+dev/smartpqi/smartpqi_ioctl.c   optional 	smartpqi
+dev/smartpqi/smartpqi_main.c    optional 	smartpqi
+dev/smartpqi/smartpqi_mem.c     optional 	smartpqi
+dev/smartpqi/smartpqi_misc.c    optional 	smartpqi
+dev/smartpqi/smartpqi_queue.c   optional 	smartpqi
+dev/smartpqi/smartpqi_request.c optional 	smartpqi
+dev/smartpqi/smartpqi_response.c	optional 	smartpqi
+dev/smartpqi/smartpqi_sis.c     optional 	smartpqi
+dev/smartpqi/smartpqi_tag.c     optional 	smartpqi
 dev/speaker/spkr.c		optional	speaker
 dev/syscons/apm/apm_saver.c	optional	apm_saver apm
 dev/syscons/scterm-teken.c	optional	sc
@@ -475,6 +493,16 @@ dev/tpm/tpm_isa.c		optional	tpm isa
 dev/uart/uart_cpu_x86.c		optional	uart
 dev/viawd/viawd.c		optional	viawd
 dev/vmware/vmxnet3/if_vmx.c	optional	vmx
+dev/vmware/vmci/vmci.c			optional	vmci
+dev/vmware/vmci/vmci_datagram.c		optional	vmci
+dev/vmware/vmci/vmci_doorbell.c		optional	vmci
+dev/vmware/vmci/vmci_driver.c		optional	vmci
+dev/vmware/vmci/vmci_event.c		optional	vmci
+dev/vmware/vmci/vmci_hashtable.c	optional	vmci
+dev/vmware/vmci/vmci_kernel_if.c	optional	vmci
+dev/vmware/vmci/vmci_qpair.c		optional	vmci
+dev/vmware/vmci/vmci_queue_pair.c	optional	vmci
+dev/vmware/vmci/vmci_resource.c		optional	vmci
 dev/wbwd/wbwd.c			optional	wbwd
 dev/xen/pci/xen_acpi_pci.c	optional	xenhvm
 dev/xen/pci/xen_pci.c		optional	xenhvm
@@ -592,8 +620,6 @@ isa/vga_isa.c			optional	vga
 kern/kern_clocksource.c		standard
 kern/link_elf_obj.c		standard
 libkern/x86/crc32_sse42.c	standard
-libkern/memmove.c		standard
-libkern/memset.c		standard
 #
 # IA32 binary support
 #
@@ -616,6 +642,7 @@ amd64/linux32/linux32_support.s	optional	compat_linux32		\
 amd64/linux32/linux32_sysent.c	optional	compat_linux32
 amd64/linux32/linux32_sysvec.c	optional	compat_linux32
 compat/linux/linux_emul.c	optional	compat_linux32
+compat/linux/linux_errno.c	optional	compat_linux32
 compat/linux/linux_file.c	optional	compat_linux32
 compat/linux/linux_fork.c	optional	compat_linux32
 compat/linux/linux_futex.c	optional	compat_linux32

@@ -38,6 +38,52 @@
 #   xargs -n1 | sort | uniq -d;
 # done
 
+# 20180512: Rename Unbound tools
+OLD_FILES+=usr/sbin/unbound
+OLD_FILES+=usr/sbin/unbound-anchor
+OLD_FILES+=usr/sbin/unbound-checkconf
+OLD_FILES+=usr/sbin/unbound-control
+OLD_FILES+=usr/share/man/man5/unbound.conf.5.gz
+OLD_FILES+=usr/share/man/man8/unbound-anchor.8.gz
+OLD_FILES+=usr/share/man/man8/unbound-checkconf.8.gz
+OLD_FILES+=usr/share/man/man8/unbound-control.8.gz
+OLD_FILES+=usr/share/man/man8/unbound.8.gz
+# 20180508: retire nxge
+OLD_FILES+=usr/share/man/man4/if_nxge.4.gz
+OLD_FILES+=usr/share/man/man4/nxge.4.gz
+# 20180505: rhosts
+OLD_FILES+=usr/share/skel/dot.rhosts
+# 20180502: retire ixgb
+OLD_FILES+=usr/share/man/man4/if_ixgb.4.gz
+OLD_FILES+=usr/share/man/man4/ixgb.4.gz
+# 20180501: retire lmc
+OLD_FILES+=usr/include/dev/lmc/if_lmc.h
+OLD_DIRS+=usr/include/dev/lmc
+OLD_FILES+=usr/sbin/lmcconfig
+OLD_FILES+=usr/share/man/man4/lmc.4.gz
+OLD_FILES+=usr/share/man/man4/if_lmc.4.gz
+OLD_FILES+=usr/share/man/man8/lmcconfig.8.gz
+# 20180417: remove fuswintr and suswintr
+OLD_FILES+=usr/share/man/man9/fuswintr.9.gz
+OLD_FILES+=usr/share/man/man9/suswintr.9.gz
+# 20180413: remove Arcnet support
+OLD_FILES+=usr/include/net/if_arc.h
+OLD_FILES+=usr/share/man/man4/cm.4.gz
+# 20180409: remove FDDI support
+OLD_FILES+=usr/include/net/fddi.h
+OLD_FILES+=usr/share/man/man4/fpa.4.gz
+# 20180319: remove /boot/overlays, replaced by /boot/dtb/overlays
+OLD_DIRS+=boot/overlays
+# 20180311: remove sys/sys/i386/include/pcaudioio.h
+.if ${TARGET_ARCH} == "i386"
+OLD_FILES+=usr/include/machine/pcaudioio.h
+.endif
+# 20180310: remove sys/sys/dataacq.h
+OLD_FILES+=usr/include/sys/dataacq.h
+# 20180306: remove DTrace scripts made obsolete by dwatch(1)
+OLD_FILES+=usr/share/dtrace/watch_execve
+OLD_FILES+=usr/share/dtrace/watch_kill
+OLD_FILES+=usr/share/dtrace/watch_vop_remove
 # 20180212: move devmatch
 OLD_FILES+=usr/sbin/devmatch
 # 20180211: remove usb.conf
@@ -47,7 +93,6 @@ OLD_FILES+=usr/share/openssl/man/man1/c_rehash.1.gz
 # 20180206: remove gdbtui
 OLD_FILES+=usr/bin/gdbtui
 # 20180201: Obsolete forth files
-OLD_FILES+=boot/efi.4th
 OLD_FILES+=boot/pcibios.4th
 # 20180114: new clang import which bumps version from 5.0.1 to 6.0.0.
 OLD_FILES+=usr/lib/clang/5.0.1/include/sanitizer/allocator_interface.h
@@ -402,7 +447,7 @@ OLD_FILES+=usr/share/man/man9/mbp_sync.9.gz
 OLD_FILES+=usr/lib/libstand.a
 OLD_FILES+=usr/lib/libstand_p.a
 OLD_FILES+=usr/include/stand.h
-OLD_FILES+=usr/share/man/man3/libstand.3
+OLD_FILES+=usr/share/man/man3/libstand.3.gz
 # 20171003: remove RCMDS
 OLD_FILES+=bin/rcp
 OLD_FILES+=rescue/rcp
@@ -1056,7 +1101,6 @@ OLD_FILES+=usr/share/man/man7/mm.7.gz
 OLD_FILES+=usr/share/man/man7/mmse.7.gz
 OLD_FILES+=usr/share/man/man7/ms.7.gz
 OLD_FILES+=usr/share/man/man7/orig_me.7.gz
-OLD_FILES+=usr/share/man/man7/roff.7.gz
 OLD_FILES+=usr/share/me/acm.me
 OLD_FILES+=usr/share/me/chars.me
 OLD_FILES+=usr/share/me/deltext.me

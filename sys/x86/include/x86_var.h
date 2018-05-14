@@ -83,7 +83,8 @@ extern	int	_ugssel;
 extern	int	use_xsave;
 extern	uint64_t xsave_mask;
 extern	u_int	max_apic_id;
-extern int	pti;
+extern	int	pti;
+extern	int	hw_ibrs_active;
 
 struct	pcb;
 struct	thread;
@@ -119,6 +120,8 @@ void	busdma_swi(void);
 bool	cpu_mwait_usable(void);
 void	cpu_probe_amdc1e(void);
 void	cpu_setregs(void);
+bool	disable_wp(void);
+void	restore_wp(bool old_wp);
 void	dump_add_page(vm_paddr_t);
 void	dump_drop_page(vm_paddr_t);
 void	finishidentcpu(void);

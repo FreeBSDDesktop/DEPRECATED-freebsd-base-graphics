@@ -47,7 +47,7 @@
 /************************************************************************
  * Driver version
  ************************************************************************/
-char ixgbe_driver_version[] = "4.0.0-k";
+char ixgbe_driver_version[] = "4.0.1-k";
 
 
 /************************************************************************
@@ -92,6 +92,7 @@ static pci_vendor_info_t ixgbe_vendor_info_array[] =
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_X_KR,  "Intel(R) PRO/10GbE PCI-Express Network Driver"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_X_KX4,  "Intel(R) PRO/10GbE PCI-Express Network Driver"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_X_10G_T,  "Intel(R) PRO/10GbE PCI-Express Network Driver"),
+  PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_X_1G_T,  "Intel(R) PRO/10GbE PCI-Express Network Driver"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_X_SFP, "Intel(R) PRO/10GbE PCI-Express Network Driver"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_A_KR, "Intel(R) PRO/10GbE PCI-Express Network Driver"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_X550EM_A_KR_L, "Intel(R) PRO/10GbE PCI-Express Network Driver"),
@@ -136,7 +137,7 @@ static void ixgbe_if_timer(if_ctx_t ctx, uint16_t);
 static void ixgbe_if_update_admin_status(if_ctx_t ctx);
 static void ixgbe_if_vlan_register(if_ctx_t ctx, u16 vtag);
 static void ixgbe_if_vlan_unregister(if_ctx_t ctx, u16 vtag);
-
+static int  ixgbe_if_i2c_req(if_ctx_t ctx, struct ifi2creq *req);
 int ixgbe_intr(void *arg);
 
 /************************************************************************
@@ -269,6 +270,7 @@ static device_method_t ixgbe_if_methods[] = {
 	DEVMETHOD(ifdi_vlan_register, ixgbe_if_vlan_register),
 	DEVMETHOD(ifdi_vlan_unregister, ixgbe_if_vlan_unregister),
 	DEVMETHOD(ifdi_get_counter, ixgbe_if_get_counter),
+	DEVMETHOD(ifdi_i2c_req, ixgbe_if_i2c_req),
 #ifdef PCI_IOV
 	DEVMETHOD(ifdi_iov_init, ixgbe_if_iov_init),
 	DEVMETHOD(ifdi_iov_uninit, ixgbe_if_iov_uninit),
@@ -1229,6 +1231,25 @@ ixgbe_if_get_counter(if_ctx_t ctx, ift_counter cnt)
 		return (if_get_counter_default(ifp, cnt));
 	}
 } /* ixgbe_if_get_counter */
+
+/************************************************************************
+ * ixgbe_if_i2c_req
+ ************************************************************************/
+static int
+ixgbe_if_i2c_req(if_ctx_t ctx, struct ifi2creq *req)
+{
+	struct adapter		*adapter = iflib_get_softc(ctx);
+	struct ixgbe_hw 	*hw = &adapter->hw;
+	int 			i;
+
+
+	if (hw->phy.ops.read_i2c_byte == NULL)
+		return (ENXIO);
+	for (i = 0; i < req->len; i++)
+		hw->phy.ops.read_i2c_byte(hw, req->offset + i,
+		    req->dev_addr, &req->data[i]);
+	return (0);
+} /* ixgbe_if_i2c_req */
 
 /************************************************************************
  * ixgbe_add_media_types
@@ -4546,4 +4567,3 @@ ixgbe_check_fan_failure(struct adapter *adapter, u32 reg, bool in_interrupt)
 	if (reg & mask)
 		device_printf(adapter->dev, "\nCRITICAL: FAN FAILURE!! REPLACE IMMEDIATELY!!\n");
 } /* ixgbe_check_fan_failure */
-

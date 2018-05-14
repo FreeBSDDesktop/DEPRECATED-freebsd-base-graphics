@@ -2,7 +2,6 @@
 -- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 --
 -- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
--- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions
@@ -92,6 +91,10 @@ function cli_execute(...)
 		return loader.command(...)
 	end
 
+end
+
+function cli_execute_unparsed(str)
+	return cli_execute(loader.parse(str))
 end
 
 -- Module exports

@@ -102,6 +102,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet6/nd6.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
@@ -1592,6 +1593,8 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 	/* Save segment, if requested. */
 	tcp_pcap_add(th, m, &(tp->t_inpkts));
 #endif
+	TCP_LOG_EVENT(tp, th, &so->so_rcv, &so->so_snd, TCP_LOG_IN, 0,
+	    tlen, NULL, true);
 
 	if ((thflags & TH_SYN) && (thflags & TH_FIN) && V_drop_synfin) {
 		if ((s = tcp_log_addrs(inc, th, NULL, NULL))) {
@@ -1679,6 +1682,9 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 		to.to_tsecr -= tp->ts_offset;
 		if (TSTMP_GT(to.to_tsecr, tcp_ts_getticks()))
 			to.to_tsecr = 0;
+		else if (tp->t_flags & TF_PREVVALID &&
+			 tp->t_badrxtwin != 0 && SEQ_LT(to.to_tsecr, tp->t_badrxtwin))
+			cc_cong_signal(tp, th, CC_RTO_ERR);
 	}
 	/*
 	 * Process options only when we get SYN/ACK back. The SYN case
@@ -1791,9 +1797,10 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 				TCPSTAT_INC(tcps_predack);
 
 				/*
-				 * "bad retransmit" recovery.
+				 * "bad retransmit" recovery without timestamps.
 				 */
-				if (tp->t_rxtshift == 1 &&
+				if ((to.to_flags & TOF_TS) == 0 &&
+				    tp->t_rxtshift == 1 &&
 				    tp->t_flags & TF_PREVVALID &&
 				    (int)(ticks - tp->t_badrxtwin) < 0) {
 					cc_cong_signal(tp, th, CC_RTO_ERR);
@@ -2784,8 +2791,10 @@ process_ACK:
 		 * original cwnd and ssthresh, and proceed to transmit where
 		 * we left off.
 		 */
-		if (tp->t_rxtshift == 1 && tp->t_flags & TF_PREVVALID &&
-		    (int)(ticks - tp->t_badrxtwin) < 0)
+		if (tp->t_rxtshift == 1 &&
+		    tp->t_flags & TF_PREVVALID &&
+		    tp->t_badrxtwin &&
+		    SEQ_LT(to.to_tsecr, tp->t_badrxtwin))
 			cc_cong_signal(tp, th, CC_RTO_ERR);
 
 		/*

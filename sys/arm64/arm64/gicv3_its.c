@@ -567,7 +567,7 @@ gicv3_its_pendtables_init(struct gicv3_its_softc *sc)
 		    0, LPI_PENDTAB_MAX_ADDR, LPI_PENDTAB_ALIGN, 0);
 
 		/* Flush so the ITS can see the memory */
-		cpu_dcache_wb_range((vm_offset_t)sc->sc_pend_base,
+		cpu_dcache_wb_range((vm_offset_t)sc->sc_pend_base[i],
 		    LPI_PENDTAB_SIZE);
 	}
 }
@@ -1734,12 +1734,13 @@ gicv3_its_acpi_attach(device_t dev)
 	if (err != 0)
 		return (err);
 
-	sc->sc_pic = intr_pic_register(dev, 1);
+	sc->sc_pic = intr_pic_register(dev,
+	    device_get_unit(dev) + ACPI_MSI_XREF);
 	intr_pic_add_handler(device_get_parent(dev), sc->sc_pic,
 	    gicv3_its_intr, sc, GIC_FIRST_LPI, LPI_NIRQS);
 
 	/* Register this device to handle MSI interrupts */
-	intr_msi_register(dev, 1);
+	intr_msi_register(dev, device_get_unit(dev) + ACPI_MSI_XREF);
 
 	return (0);
 }

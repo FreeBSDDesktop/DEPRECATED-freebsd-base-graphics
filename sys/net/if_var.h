@@ -70,11 +70,14 @@ struct	route;			/* if_output */
 struct	vnet;
 struct	ifmedia;
 struct	netmap_adapter;
+struct	netdump_methods;
 
 #ifdef _KERNEL
 #include <sys/mbuf.h>		/* ifqueue only? */
 #include <sys/buf_ring.h>
 #include <net/vnet.h>
+#include <ck_queue.h>
+#include <sys/epoch.h>
 #endif /* _KERNEL */
 #include <sys/counter.h>
 #include <sys/lock.h>		/* XXX */
@@ -103,6 +106,7 @@ VNET_DECLARE(struct hhook_head *, ipsec_hhh_in[HHOOK_IPSEC_COUNT]);
 VNET_DECLARE(struct hhook_head *, ipsec_hhh_out[HHOOK_IPSEC_COUNT]);
 #define	V_ipsec_hhh_in	VNET(ipsec_hhh_in)
 #define	V_ipsec_hhh_out	VNET(ipsec_hhh_out)
+extern epoch_t net_epoch;
 #endif /* _KERNEL */
 
 typedef enum {
@@ -317,6 +321,10 @@ struct ifnet {
 		     struct route *);
 	void	(*if_input)		/* input routine (from h/w driver) */
 		(struct ifnet *, struct mbuf *);
+	struct mbuf *(*if_bridge_input)(struct ifnet *, struct mbuf *);
+	int	(*if_bridge_output)(struct ifnet *, struct mbuf *, struct sockaddr *,
+		    struct rtentry *);
+	void (*if_bridge_linkstate)(struct ifnet *ifp);
 	if_start_fn_t	if_start;	/* initiate output routine */
 	if_ioctl_fn_t	if_ioctl;	/* ioctl routine */
 	if_init_fn_t	if_init;	/* Init routine */
@@ -364,6 +372,14 @@ struct ifnet {
 	if_snd_tag_modify_t *if_snd_tag_modify;
 	if_snd_tag_query_t *if_snd_tag_query;
 	if_snd_tag_free_t *if_snd_tag_free;
+
+	/* Ethernet PCP */
+	uint8_t if_pcp;
+
+	/*
+	 * Netdump hooks to be called while dumping.
+	 */
+	struct netdump_methods *if_netdump_methods;
 
 	/*
 	 * Spare fields to be added before branching a stable branch, so
@@ -418,6 +434,8 @@ EVENTHANDLER_DECLARE(ifnet_link_event, ifnet_link_event_handler_t);
 /* Interface up/down event */
 #define IFNET_EVENT_UP		0
 #define IFNET_EVENT_DOWN	1
+#define IFNET_EVENT_PCP		2	/* priority code point, PCP */
+
 typedef void (*ifnet_event_fn)(void *, struct ifnet *ifp, int event);
 EVENTHANDLER_DECLARE(ifnet_event, ifnet_event_fn);
 #endif /* _SYS_EVENTHANDLER_H_ */
@@ -585,6 +603,12 @@ VNET_DECLARE(struct ifnet *, loif);	/* first loopback interface */
 #define	V_if_index	VNET(if_index)
 #define	V_loif		VNET(loif)
 
+#ifdef MCAST_VERBOSE
+#define MCDPRINTF printf
+#else
+#define MCDPRINTF(...)
+#endif
+
 int	if_addgroup(struct ifnet *, const char *);
 int	if_delgroup(struct ifnet *, const char *);
 int	if_addmulti(struct ifnet *, struct sockaddr *, struct ifmultiaddr **);
@@ -594,12 +618,14 @@ void	if_attach(struct ifnet *);
 void	if_dead(struct ifnet *);
 int	if_delmulti(struct ifnet *, struct sockaddr *);
 void	if_delmulti_ifma(struct ifmultiaddr *);
+void	if_delmulti_ifma_flags(struct ifmultiaddr *, int flags);
 void	if_detach(struct ifnet *);
 void	if_purgeaddrs(struct ifnet *);
 void	if_delallmulti(struct ifnet *);
 void	if_down(struct ifnet *);
 struct ifmultiaddr *
 	if_findmulti(struct ifnet *, const struct sockaddr *);
+void	if_freemulti(struct ifmultiaddr *ifma);
 void	if_free(struct ifnet *);
 void	if_initname(struct ifnet *, const char *, int);
 void	if_link_state_change(struct ifnet *, int);
@@ -715,6 +741,9 @@ int drbr_enqueue_drv(if_t ifp, struct buf_ring *br, struct mbuf *m);
 /* TSO */
 void if_hw_tsomax_common(if_t ifp, struct ifnet_hw_tsomax *);
 int if_hw_tsomax_update(if_t ifp, struct ifnet_hw_tsomax *);
+
+/* accessors for struct ifreq */
+void *ifr_data_get_ptr(void *ifrp);
 
 #ifdef DEVICE_POLLING
 enum poll_cmd { POLL_ONLY, POLL_AND_CHECK_STATUS };

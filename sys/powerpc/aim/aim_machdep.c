@@ -57,7 +57,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
 #include "opt_platform.h"
@@ -160,20 +159,79 @@ extern void	*dlmisstrap, *dlmisssize;
 extern void	*dsmisstrap, *dsmisssize;
 
 extern void *ap_pcpu;
+extern void __restartkernel(vm_offset_t, vm_offset_t, vm_offset_t, void *, uint32_t, register_t offset, register_t msr);
 
+void aim_early_init(vm_offset_t fdt, vm_offset_t toc, vm_offset_t ofentry,
+    void *mdp, uint32_t mdp_cookie);
 void aim_cpu_init(vm_offset_t toc);
+
+void
+aim_early_init(vm_offset_t fdt, vm_offset_t toc, vm_offset_t ofentry, void *mdp,
+    uint32_t mdp_cookie)
+{
+	register_t	scratch;
+
+	/*
+	 * If running from an FDT, make sure we are in real mode to avoid
+	 * tromping on firmware page tables. Everything in the kernel assumes
+	 * 1:1 mappings out of firmware, so this won't break anything not
+	 * already broken. This doesn't work if there is live OF, since OF
+	 * may internally use non-1:1 mappings.
+	 */
+	if (ofentry == 0)
+		mtmsr(mfmsr() & ~(PSL_IR | PSL_DR));
+
+#ifdef __powerpc64__
+	/*
+	 * If in real mode, relocate to high memory so that the kernel
+	 * can execute from the direct map.
+	 */
+	if (!(mfmsr() & PSL_DR) &&
+	    (vm_offset_t)&aim_early_init < DMAP_BASE_ADDRESS)
+		__restartkernel(fdt, 0, ofentry, mdp, mdp_cookie,
+		    DMAP_BASE_ADDRESS, mfmsr());
+#endif
+
+	/* Various very early CPU fix ups */
+	switch (mfpvr() >> 16) {
+		/*
+		 * PowerPC 970 CPUs have a misfeature requested by Apple that
+		 * makes them pretend they have a 32-byte cacheline. Turn this
+		 * off before we measure the cacheline size.
+		 */
+		case IBM970:
+		case IBM970FX:
+		case IBM970MP:
+		case IBM970GX:
+			scratch = mfspr(SPR_HID5);
+			scratch &= ~HID5_970_DCBZ_SIZE_HI;
+			mtspr(SPR_HID5, scratch);
+			break;
+	#ifdef __powerpc64__
+		case IBMPOWER7:
+		case IBMPOWER7PLUS:
+		case IBMPOWER8:
+		case IBMPOWER8E:
+		case IBMPOWER9:
+			/* XXX: get from ibm,slb-size in device tree */
+			n_slbs = 32;
+			break;
+	#endif
+	}
+}
 
 void
 aim_cpu_init(vm_offset_t toc)
 {
 	size_t		trap_offset, trapsize;
 	vm_offset_t	trap;
-	register_t	msr, scratch;
+	register_t	msr;
 	uint8_t		*cache_check;
 	int		cacheline_warn;
-	#ifndef __powerpc64__
+#ifndef __powerpc64__
+	register_t	scratch;
 	int		ppc64;
-	#endif
+#endif
 
 	trap_offset = 0;
 	cacheline_warn = 0;
@@ -198,32 +256,6 @@ aim_cpu_init(vm_offset_t toc)
 	 * Bits 1-4, 10-15 (ppc32), 33-36, 42-47 (ppc64)
 	 */
 	psl_userstatic &= ~0x783f0000UL;
-
-	/* Various very early CPU fix ups */
-	switch (mfpvr() >> 16) {
-		/*
-		 * PowerPC 970 CPUs have a misfeature requested by Apple that
-		 * makes them pretend they have a 32-byte cacheline. Turn this
-		 * off before we measure the cacheline size.
-		 */
-		case IBM970:
-		case IBM970FX:
-		case IBM970MP:
-		case IBM970GX:
-			scratch = mfspr(SPR_HID5);
-			scratch &= ~HID5_970_DCBZ_SIZE_HI;
-			mtspr(SPR_HID5, scratch);
-			break;
-	#ifdef __powerpc64__
-		case IBMPOWER7:
-		case IBMPOWER7PLUS:
-		case IBMPOWER8:
-		case IBMPOWER8E:
-			/* XXX: get from ibm,slb-size in device tree */
-			n_slbs = 32;
-			break;
-	#endif
-	}
 
 	/*
 	 * Initialize the interrupt tables and figure out our cache line
@@ -455,11 +487,33 @@ va_to_vsid(pmap_t pm, vm_offset_t va)
 
 #endif
 
+/*
+ * These functions need to provide addresses that both (a) work in real mode
+ * (or whatever mode/circumstances the kernel is in in early boot (now)) and
+ * (b) can still, in principle, work once the kernel is going. Because these
+ * rely on existing mappings/real mode, unmap is a no-op.
+ */
 vm_offset_t
 pmap_early_io_map(vm_paddr_t pa, vm_size_t size)
 {
+	KASSERT(!pmap_bootstrapped, ("Not available after PMAP started!"));
 
-	return (pa);
+	/*
+	 * If we have the MMU up in early boot, assume it is 1:1. Otherwise,
+	 * try to get the address in a memory region compatible with the
+	 * direct map for efficiency later.
+	 */
+	if (mfmsr() & PSL_DR)
+		return (pa);
+	else
+		return (DMAP_BASE_ADDRESS + pa);
+}
+
+void
+pmap_early_io_unmap(vm_offset_t va, vm_size_t size)
+{
+
+	KASSERT(!pmap_bootstrapped, ("Not available after PMAP started!"));
 }
 
 /* From p3-53 of the MPC7450 RISC Microprocessor Family Reference Manual */
