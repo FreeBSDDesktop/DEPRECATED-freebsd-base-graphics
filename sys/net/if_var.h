@@ -76,6 +76,8 @@ struct	netdump_methods;
 #include <sys/mbuf.h>		/* ifqueue only? */
 #include <sys/buf_ring.h>
 #include <net/vnet.h>
+#include <ck_queue.h>
+#include <sys/epoch.h>
 #endif /* _KERNEL */
 #include <sys/counter.h>
 #include <sys/lock.h>		/* XXX */
@@ -104,6 +106,7 @@ VNET_DECLARE(struct hhook_head *, ipsec_hhh_in[HHOOK_IPSEC_COUNT]);
 VNET_DECLARE(struct hhook_head *, ipsec_hhh_out[HHOOK_IPSEC_COUNT]);
 #define	V_ipsec_hhh_in	VNET(ipsec_hhh_in)
 #define	V_ipsec_hhh_out	VNET(ipsec_hhh_out)
+extern epoch_t net_epoch;
 #endif /* _KERNEL */
 
 typedef enum {
@@ -318,6 +321,10 @@ struct ifnet {
 		     struct route *);
 	void	(*if_input)		/* input routine (from h/w driver) */
 		(struct ifnet *, struct mbuf *);
+	struct mbuf *(*if_bridge_input)(struct ifnet *, struct mbuf *);
+	int	(*if_bridge_output)(struct ifnet *, struct mbuf *, struct sockaddr *,
+		    struct rtentry *);
+	void (*if_bridge_linkstate)(struct ifnet *ifp);
 	if_start_fn_t	if_start;	/* initiate output routine */
 	if_ioctl_fn_t	if_ioctl;	/* ioctl routine */
 	if_init_fn_t	if_init;	/* Init routine */
